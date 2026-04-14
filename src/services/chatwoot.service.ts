@@ -87,13 +87,51 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
     }
 
     // 3. Criar a Mensagem na Conversa
-    await axios.post(`${baseUrl}/conversations/${conversationId}/messages`, {
+    const messagePayload: any = {
       content: content,
       message_type: 'incoming',
       private: false
-    }, { headers });
+    };
 
-    console.log(`Mensagem de ${customerPhone} enviada ao Chatwoot com sucesso!`);
+    const messageUrl = `${baseUrl}/conversations/${conversationId}/messages`;
+
+    // Se for uma mídia, vamos tentar enviar como anexo
+    if (messageType !== 'text' && gupshupPayload.payload.payload.url) {
+      try {
+        const fileUrl = gupshupPayload.payload.payload.url;
+        console.log(`Baixando mídia da Gupshup: ${fileUrl}`);
+        
+        const fileResponse = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+        const buffer = Buffer.from(fileResponse.data);
+        
+        // Extrair nome do arquivo da URL ou gerar um
+        const fileName = fileUrl.split('/').pop() || `file_${Date.now()}`;
+        const contentType = fileResponse.headers['content-type'] || 'application/octet-stream';
+
+        const formData = new FormData();
+        formData.append('content', content);
+        formData.append('message_type', 'incoming');
+        
+        // No Node.js com Axios, para enviar arquivos via FormData:
+        const blob = new Blob([buffer], { type: contentType });
+        formData.append('attachments[]', blob, fileName);
+
+        await axios.post(messageUrl, formData, {
+          headers: {
+            ...headers,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        console.log(`Mensagem com anexo enviada ao Chatwoot!`);
+      } catch (mediaError) {
+        console.error('Erro ao processar anexo, enviando como texto apenas:', mediaError);
+        await axios.post(messageUrl, messagePayload, { headers });
+      }
+    } else {
+      await axios.post(messageUrl, messagePayload, { headers });
+    }
+
+    console.log(`Mensagem de ${customerPhone} processada com sucesso!`);
   } catch (error: any) {
     console.error('Erro ao processar mensagem para o Chatwoot:', error?.response?.data || error.message);
   }

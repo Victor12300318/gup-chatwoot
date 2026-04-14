@@ -44,19 +44,43 @@ export const handleChatwootWebhook = async (req: Request, res: Response) => {
     const payload = req.body;
     console.log('Webhook Chatwoot recebido:', JSON.stringify(payload, null, 2));
 
-    // Verificar se é uma mensagem criada por um agente (outgoing)
-    if (payload.event === 'message_created' && payload.message_type === 'outgoing') {
-      const inboxId = payload.inbox.id;
+    const isMessageCreated = payload.event === 'message_created';
+    const isConversationUpdated = payload.event === 'conversation_updated';
+    
+    let isOutgoing = false;
+    let messageData = payload;
+
+    if (isMessageCreated && payload.message_type === 'outgoing') {
+      isOutgoing = true;
+    } else if (isConversationUpdated && payload.messages && payload.messages.length > 0) {
+      // Pega a última mensagem do array
+      const lastMessage = payload.messages[payload.messages.length - 1];
+      // No Chatwoot, message_type 1 ou 'outgoing' indica mensagem do agente
+      if (lastMessage.message_type === 1 || lastMessage.message_type === 'outgoing') {
+        isOutgoing = true;
+        // Mesclamos o payload original com os dados da mensagem específica
+        messageData = { ...payload, ...lastMessage };
+      }
+    }
+
+    if (isOutgoing) {
+      // O ID da inbox pode vir em locais diferentes dependendo do evento
+      const inboxId = payload.inbox_id || (payload.inbox && payload.inbox.id);
+      
+      if (!inboxId) {
+        console.error('Inbox ID não encontrado no payload do Chatwoot');
+        return res.status(200).send('OK');
+      }
+
       console.log(`Buscando conexão para o Inbox ID Chatwoot: ${inboxId}`);
 
       const connection = await prisma.connection.findFirst({
-        where: { chatwootInboxId: inboxId }
+        where: { chatwootInboxId: Number(inboxId) }
       });
 
       if (connection) {
-        console.log(`Conexão encontrada para o Inbox ${inboxId}. Enviando resposta para Gupshup...`);
-        // Enviar assíncronamente para a Gupshup
-        processChatwootMessage(connection, payload).catch(err => {
+        console.log(`Conexão encontrada para o Inbox ${inboxId}. Enviando para Gupshup...`);
+        processChatwootMessage(connection, messageData).catch(err => {
           console.error('Erro ao processar mensagem Chatwoot -> Gupshup:', err);
         });
       } else {
