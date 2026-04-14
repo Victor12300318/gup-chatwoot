@@ -28,6 +28,14 @@ export const handleGupshupWebhook = async (req: Request, res: Response) => {
       } else {
         console.warn(`Webhook Gupshup: Conexão não encontrada para o App "${appName}". Verifique se o nome do App no conector bate com o do painel da Gupshup.`);
       }
+    } else if (payload.type === 'message-event') {
+      // Evento de status de mensagem (enqueued, failed, sent, delivered, read)
+      const appName = payload.app;
+      const status = payload.payload.type;
+      const phone = payload.payload.destination;
+      const messageId = payload.payload.id;
+      
+      console.log(`[Status de Entrega] App: ${appName} | Cliente: ${phone} | Status: ${status.toUpperCase()} | ID: ${messageId}`);
     } else {
       console.log(`Evento Gupshup ignorado (tipo: ${payload.type})`);
     }

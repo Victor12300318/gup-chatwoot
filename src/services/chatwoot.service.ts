@@ -12,6 +12,8 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
     
     if (messageType === 'text') {
       content = gupshupPayload.payload.payload.text;
+    } else if (messageType === 'button_reply' || messageType === 'list_reply' || messageType === 'quick_reply') {
+      content = gupshupPayload.payload.payload.title || gupshupPayload.payload.payload.reply || '[Botão/Lista Clicado]';
     } else if (messageType === 'image') {
       content = `[Imagem] ${gupshupPayload.payload.payload.url}`;
     } else if (messageType === 'document') {
@@ -90,7 +92,8 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
     const messagePayload: any = {
       content: content,
       message_type: 'incoming',
-      private: false
+      private: false,
+      source_id: gupshupPayload.payload.id // ID da mensagem no Gupshup para evitar duplicação no Chatwoot
     };
 
     const messageUrl = `${baseUrl}/conversations/${conversationId}/messages`;
@@ -111,6 +114,9 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
         const formData = new FormData();
         formData.append('content', content);
         formData.append('message_type', 'incoming');
+        if (gupshupPayload.payload.id) {
+          formData.append('source_id', gupshupPayload.payload.id);
+        }
         
         // No Node.js com Axios, para enviar arquivos via FormData:
         const blob = new Blob([buffer], { type: contentType });
