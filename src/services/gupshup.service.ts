@@ -4,19 +4,27 @@ import { Connection } from '@prisma/client';
 export const processChatwootMessage = async (connection: Connection, chatwootPayload: any) => {
   try {
     // Tenta pegar o telefone de vários lugares possíveis no payload do Chatwoot
+    // Dá preferência explícita para o phone_number para evitar pegar UUIDs do source_id
     let customerPhone = 
-      chatwootPayload.conversation?.contact_inbox?.source_id || 
       chatwootPayload.meta?.sender?.phone_number || // Padrão no conversation_updated
       chatwootPayload.conversation?.meta?.sender?.phone_number ||
       chatwootPayload.sender?.phone_number ||
-      chatwootPayload.conversation?.contact?.phone_number;
+      chatwootPayload.conversation?.contact?.phone_number ||
+      chatwootPayload.conversation?.contact_inbox?.source_id;
 
     if (!customerPhone) {
       console.error('Número de telefone do cliente não encontrado no payload do Chatwoot.');
       return;
     }
 
+    // Limpa o número para deixar apenas dígitos
     customerPhone = customerPhone.replace(/\D/g, '');
+
+    // Se o telefone gerado tiver mais que 15 dígitos ou menos de 8, provavelmente é um UUID filtrado
+    if (customerPhone.length > 15 || customerPhone.length < 8) {
+      console.error(`O telefone extraído parece ser inválido ou um UUID: ${customerPhone}`);
+      return;
+    }
     
     const content = chatwootPayload.content || '';
     const attachments = chatwootPayload.attachments;
