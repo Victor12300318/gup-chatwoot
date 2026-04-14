@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gupshup + Chatwoot | Gateway</title>
+    <!-- Fontes premium e marcantes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg-dark: #0a0a0a;
+        --bg-panel: #111111;
+        --border-color: #222;
+        --text-main: #f0f0f0;
+        --text-muted: #888;
+        --accent: #d9ff00; /* Neon Lime para o design Cyber/Brutalist */
+        --accent-hover: #b8d900;
+        --danger: #ff4444;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: var(--bg-dark);
+        color: var(--text-main);
+        font-family: 'Space Grotesk', sans-serif;
+        min-height: 100vh;
+        background-image: 
+          radial-gradient(circle at 15% 50%, rgba(217, 255, 0, 0.03) 0%, transparent 50%),
+          radial-gradient(circle at 85% 30%, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
+      }
+
+      /* Ruído sutil no fundo */
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.04"/%3E%3C/svg%3E');
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 4rem 2rem;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 4rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 2rem;
+      }
+
+      h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        letter-spacing: -1px;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      h1 span {
+        color: var(--accent);
+      }
+
+      .header-subtitle {
+        color: var(--text-muted);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+      }
+
+      .btn {
+        background: transparent;
+        color: var(--text-main);
+        border: 1px solid var(--border-color);
+        padding: 0.75rem 1.5rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: var(--bg-dark);
+        border-color: var(--accent);
+        font-weight: bold;
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-hover);
+        box-shadow: 0 0 15px rgba(217, 255, 0, 0.3);
+      }
+
+      .btn-danger {
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+
+      .btn-danger:hover {
+        background: var(--danger);
+        color: white;
+      }
+
+      /* Grid de Cards */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 2rem;
+      }
+
+      .card {
+        background: var(--bg-panel);
+        border: 1px solid var(--border-color);
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.3s ease, border-color 0.3s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        border-color: #333;
+      }
+
+      .card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 3px;
+        background: var(--accent);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.3s ease;
+      }
+
+      .card:hover::before {
+        transform: scaleX(1);
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+      }
+
+      .phone-number {
+        font-size: 1.5rem;
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+      }
+
+      .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: var(--accent);
+        font-family: 'JetBrains Mono', monospace;
+      }
+
+      .status-dot {
+        width: 8px; height: 8px;
+        background: var(--accent);
+        border-radius: 50%;
+        box-shadow: 0 0 10px var(--accent);
+      }
+
+      .card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .info-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .info-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .info-value {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        background: rgba(255,255,255,0.03);
+        padding: 0.5rem;
+        border: 1px solid #222;
+        word-break: break-all;
+      }
+
+      /* Modal */
+      .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8);
+        backdrop-filter: blur(5px);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+      }
+
+      .modal-overlay.active {
+        display: flex;
+      }
+
+      .modal-content {
+        background: var(--bg-panel);
+        border: 1px solid var(--border-color);
+        padding: 3rem;
+        width: 100%;
+        max-width: 600px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      }
+
+      .modal-title {
+        font-size: 2rem;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 1rem;
+      }
+
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .form-group input {
+        width: 100%;
+        background: var(--bg-dark);
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+        padding: 0.75rem;
+        font-family: 'JetBrains Mono', monospace;
+        transition: border-color 0.2s ease;
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
+      }
+      
+      .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 5rem 0;
+        color: var(--text-muted);
+        border: 1px dashed var(--border-color);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div>
+          <h1>GATEWAY<span>.</span></h1>
+          <div class="header-subtitle">Gupshup ⚡ Chatwoot Orchestrator</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal()">+ Add Connection</button>
+      </header>
+
+      <div class="grid" id="connectionsGrid">
+        <!-- Cards injetados via JS -->
+      </div>
+    </div>
+
+    <!-- Modal Form -->
+    <div class="modal-overlay" id="addModal">
+      <div class="modal-content">
+        <h2 class="modal-title">NEW CONNECTION</h2>
+        <form id="connectionForm">
+          <div class="form-group">
+            <label>Gupshup Phone Number</label>
+            <input type="text" id="gupPhone" placeholder="Ex: 5511999999999" required>
+          </div>
+          <div class="form-group">
+            <label>Gupshup App Name</label>
+            <input type="text" id="gupApp" placeholder="Ex: MyStoreApp" required>
+          </div>
+          <div class="form-group">
+            <label>Gupshup API Key</label>
+            <input type="password" id="gupKey" required>
+          </div>
+          <div style="height: 1px; background: #222; margin: 2rem 0;"></div>
+          
+          <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; background: rgba(217, 255, 0, 0.05); padding: 1rem; border: 1px solid var(--accent);">
+            <input type="checkbox" id="autoCreate" checked style="width: auto; accent-color: var(--accent);">
+            <label for="autoCreate" style="margin: 0; color: var(--accent); font-weight: bold; cursor: pointer;">AUTO-CREATE CHATWOOT INBOX</label>
+          </div>
+
+          <div class="form-group">
+            <label>Chatwoot URL</label>
+            <input type="url" id="cwUrl" placeholder="Ex: https://chatwoot.mydomain.com" required>
+          </div>
+          <div class="form-group" style="display: flex; gap: 1rem;">
+            <div style="flex: 1;">
+              <label>Account ID</label>
+              <input type="number" id="cwAccId" value="1" required>
+            </div>
+            <div style="flex: 1;" id="inboxIdContainer" style="display: none;">
+              <label>API Inbox ID</label>
+              <input type="number" id="cwInboxId">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Chatwoot Access Token</label>
+            <input type="password" id="cwToken" required>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn" onclick="closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Deploy Route</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      const API_URL = '/api/connections';
+
+      async function fetchConnections() {
+        const grid = document.getElementById('connectionsGrid');
+        try {
+          const res = await fetch(API_URL);
+          const data = await res.json();
+          
+          grid.innerHTML = '';
+          
+          if(data.length === 0) {
+            grid.innerHTML = `<div class="empty-state">No active routes detected. Add a connection to begin orchestration.</div>`;
+            return;
+          }
+
+          data.forEach(conn => {
+            const baseUrl = window.location.origin;
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+              <div class="card-header">
+                <div class="phone-number">+${conn.gupshupSourcePhone}</div>
+                <div class="status-indicator">
+                  <div class="status-dot"></div> LIVE
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="info-group">
+                  <span class="info-label">Gupshup App Name</span>
+                  <span class="info-value">${conn.gupshupAppName}</span>
+                </div>
+                <div class="info-group">
+                  <span class="info-label">Chatwoot Destination</span>
+                  <span class="info-value">Inbox #${conn.chatwootInboxId} @ Acc #${conn.chatwootAccountId}</span>
+                </div>
+                <div style="height: 1px; background: #222; margin: 0.5rem 0;"></div>
+                <div class="info-group">
+                  <span class="info-label">Gupshup Webhook URL (Copy this)</span>
+                  <span class="info-value" style="color: var(--accent); cursor: pointer;" onclick="navigator.clipboard.writeText('${baseUrl}/webhooks/gupshup')">${baseUrl}/webhooks/gupshup</span>
+                </div>
+                <div class="info-group">
+                  <span class="info-label">Chatwoot Webhook URL (Copy this)</span>
+                  <span class="info-value" style="color: var(--accent); cursor: pointer;" onclick="navigator.clipboard.writeText('${baseUrl}/webhooks/chatwoot')">${baseUrl}/webhooks/chatwoot</span>
+                </div>
+                <button class="btn btn-danger" style="margin-top: 1rem; width: fit-content;" onclick="deleteConnection('${conn.id}')">TERMINATE ROUTE</button>
+              </div>
+            `;
+            grid.appendChild(card);
+          });
+        } catch (e) {
+          grid.innerHTML = `<div class="empty-state" style="color: var(--danger);">Connection error. Is the API running?</div>`;
+        }
+      }
+
+      async function deleteConnection(id) {
+        if(confirm('Are you sure you want to terminate this route?')) {
+          await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+          fetchConnections();
+        }
+      }
+
+      document.getElementById('autoCreate').addEventListener('change', function(e) {
+        const inboxContainer = document.getElementById('inboxIdContainer');
+        const inboxInput = document.getElementById('cwInboxId');
+        if (e.target.checked) {
+          inboxContainer.style.display = 'none';
+          inboxInput.removeAttribute('required');
+        } else {
+          inboxContainer.style.display = 'block';
+          inboxInput.setAttribute('required', 'true');
+        }
+      });
+
+      // Trigger initial state
+      document.getElementById('autoCreate').dispatchEvent(new Event('change'));
+
+      document.getElementById('connectionForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const autoCreate = document.getElementById('autoCreate').checked;
+        
+        const payload = {
+          gupshupSourcePhone: document.getElementById('gupPhone').value.replace(/\D/g, ''),
+          gupshupAppName: document.getElementById('gupApp').value,
+          gupshupApiKey: document.getElementById('gupKey').value,
+          chatwootUrl: document.getElementById('cwUrl').value,
+          chatwootAccountId: document.getElementById('cwAccId').value,
+          chatwootAccessToken: document.getElementById('cwToken').value,
+          autoCreateInbox: autoCreate
+        };
+
+        if (!autoCreate) {
+          payload.chatwootInboxId = document.getElementById('cwInboxId').value;
+        }
+
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerText;
+        submitBtn.innerText = 'DEPLOYING...';
+        submitBtn.disabled = true;
+
+        try {
+          const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          
+          if(res.ok) {
+            closeModal();
+            fetchConnections();
+            e.target.reset();
+            document.getElementById('autoCreate').dispatchEvent(new Event('change'));
+          } else {
+            const errData = await res.json();
+            alert('Failed to deploy route: ' + (errData.error || 'Check the payload.'));
+          }
+        } catch(err) {
+          alert('Network error.');
+        } finally {
+          submitBtn.innerText = originalText;
+          submitBtn.disabled = false;
+        }
+      });
+
+      function openModal() {
+        document.getElementById('addModal').classList.add('active');
+      }
+
+      function closeModal() {
+        document.getElementById('addModal').classList.remove('active');
+      }
+
+      // Initial load
+      fetchConnections();
+    </script>
+  </body>
+</html>
