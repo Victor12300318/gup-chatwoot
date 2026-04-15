@@ -20,18 +20,34 @@ const getTypebotHeaders = (connection: Connection) => {
 
 export const startTypebotSession = async (connection: Connection, message: string, customerPhone: string): Promise<TypebotResponse | null> => {
   try {
-    const url = `${connection.typebotUrl}/api/v1/typebots/${connection.typebotId}/startChat`;
+    // Adicionando variáveis também na URL como Fallback de segurança
+    const url = `${connection.typebotUrl}/api/v1/typebots/${connection.typebotId}/startChat?user_phone=${customerPhone}`;
+    
     const payload = {
       message: { type: 'text', text: message },
       isStreamEnabled: false,
+      // Duplicando formatos para garantir compatibilidade com diferentes versões do Typebot
       prefilledVariables: {
+        user_phone: customerPhone,
+        remote_jid: customerPhone,
+        contact_number: customerPhone
+      },
+      variables: {
         user_phone: customerPhone,
         remote_jid: customerPhone,
         contact_number: customerPhone
       }
     };
 
+    console.log(`[DEBUG TYPEBOT] Enviando payload de início para ${customerPhone}`);
+
     const response = await axios.post(url, payload, { headers: getTypebotHeaders(connection), timeout: 30000 });
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao iniciar Typebot session:', error?.response?.data || error.message);
+    return null;
+  }
+};
     return response.data;
   } catch (error: any) {
     console.error('Erro ao iniciar Typebot session:', error?.response?.data || error.message);
@@ -90,22 +106,22 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
     let tbResponseData: TypebotResponse | null = null;
 
     if (sessionRecord) {
-      console.log(`[SESSÃO] Usando sessão existente para ${customerPhone}: ${sessionRecord.typebotSessionId}`);
+      console.log(`[SESSÃO] Continuando conversa para ${customerPhone} (Session: ${sessionRecord.typebotSessionId})`);
       const { response, data } = await continueTypebotSession(connection, sessionRecord.typebotSessionId, messageContent);
       
       if (response?.status === 200) {
         tbResponseData = data;
       } else if (response?.status === 404 || response?.status === 403) {
-        console.warn(`[SESSÃO] Sessão expirada ou inválida para ${customerPhone}. Reiniciando...`);
+        console.warn(`[SESSÃO] Sessão expirada no Typebot para ${customerPhone}. Reiniciando fluxo para injetar variáveis.`);
         sessionRecord = null;
       } else {
-        console.error(`[SESSÃO] Erro inesperado ao continuar sessão para ${customerPhone}:`, response?.status);
+        console.error(`[SESSÃO] Erro na API do Typebot (${response?.status}) para ${customerPhone}`);
         return;
       }
     }
 
     if (!sessionRecord) {
-      console.log(`[SESSÃO] Iniciando novo chat para ${customerPhone}`);
+      console.log(`[SESSÃO] Criando nova sessão para ${customerPhone} e injetando variáveis: user_phone=${customerPhone}`);
       tbResponseData = await startTypebotSession(connection, messageContent, customerPhone);
       if (tbResponseData && tbResponseData.sessionId) {
         const newSessionId = tbResponseData.sessionId;
