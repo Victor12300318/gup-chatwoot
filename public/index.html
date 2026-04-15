@@ -420,13 +420,19 @@
                 </div>
                 <div style="height: 1px; background: #222; margin: 0.5rem 0;"></div>
                 <div class="info-group">
-                  <span class="info-label">Gupshup Webhook URL (Copy this)</span>
+                  <span class="info-label">Gupshup Webhook (Callback URL)</span>
                   <span class="info-value" style="color: var(--accent); cursor: pointer;" onclick="navigator.clipboard.writeText('${baseUrl}/webhooks/gupshup')">${baseUrl}/webhooks/gupshup</span>
                 </div>
                 <div class="info-group">
-                  <span class="info-label">Chatwoot Webhook URL (Copy this)</span>
+                  <span class="info-label">Chatwoot Webhook (Aba Webhooks)</span>
                   <span class="info-value" style="color: var(--accent); cursor: pointer;" onclick="navigator.clipboard.writeText('${baseUrl}/webhooks/chatwoot')">${baseUrl}/webhooks/chatwoot</span>
                 </div>
+                ${conn.typebotEnabled ? `
+                <div class="info-group">
+                  <span class="info-label">Chatwoot Bot Webhook (Aba Agent Bot)</span>
+                  <span class="info-value" style="color: #00ff88; border-color: #00ff88; cursor: pointer;" onclick="navigator.clipboard.writeText('${baseUrl}/webhooks/chatwoot/bot')">${baseUrl}/webhooks/chatwoot/bot</span>
+                </div>
+                ` : ''}
                 <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                   <button class="btn btn-primary" style="flex: 1;" onclick='editConnection(${JSON.stringify(conn).replace(/'/g, "&#39;")})'>EDIT ROUTE</button>
                   <button class="btn btn-danger" style="flex: 1;" onclick="deleteConnection('${conn.id}')">TERMINATE</button>
