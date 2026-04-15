@@ -18,12 +18,17 @@ const getTypebotHeaders = (connection: Connection) => {
   return headers;
 };
 
-export const startTypebotSession = async (connection: Connection, message: string): Promise<TypebotResponse | null> => {
+export const startTypebotSession = async (connection: Connection, message: string, customerPhone: string): Promise<TypebotResponse | null> => {
   try {
     const url = `${connection.typebotUrl}/api/v1/typebots/${connection.typebotId}/startChat`;
     const payload = {
       message: { type: 'text', text: message },
-      isStreamEnabled: false
+      isStreamEnabled: false,
+      prefilledVariables: {
+        user_phone: customerPhone,
+        remote_jid: customerPhone,
+        contact_number: customerPhone
+      }
     };
 
     const response = await axios.post(url, payload, { headers: getTypebotHeaders(connection), timeout: 30000 });
@@ -101,7 +106,7 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
 
     if (!sessionRecord) {
       console.log(`[SESSÃO] Iniciando novo chat para ${customerPhone}`);
-      tbResponseData = await startTypebotSession(connection, messageContent);
+      tbResponseData = await startTypebotSession(connection, messageContent, customerPhone);
       if (tbResponseData && tbResponseData.sessionId) {
         const newSessionId = tbResponseData.sessionId;
         
