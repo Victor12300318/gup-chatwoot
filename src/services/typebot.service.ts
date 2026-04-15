@@ -77,32 +77,38 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
   if (!connection.typebotEnabled || !connection.typebotUrl || !connection.typebotId) return;
 
   try {
+    // BUSCA SESSÃO PELO TELEFONE (Chave Única para persistência real)
     let sessionRecord = await prisma.typebotSession.findUnique({
-      where: { chatwootConversationId: String(conversationId) }
+      where: { phoneNumber: customerPhone }
     });
 
     let tbResponseData: TypebotResponse | null = null;
 
     if (sessionRecord) {
+      console.log(`[SESSÃO] Usando sessão existente para ${customerPhone}: ${sessionRecord.typebotSessionId}`);
       const { response, data } = await continueTypebotSession(connection, sessionRecord.typebotSessionId, messageContent);
-      if (response?.status === 404 || response?.status === 403) {
-        sessionRecord = null; // Sessão expirou ou não encontrada, vamos recriar
-      } else if (response?.status === 200) {
+      
+      if (response?.status === 200) {
         tbResponseData = data;
+      } else if (response?.status === 404 || response?.status === 403) {
+        console.warn(`[SESSÃO] Sessão expirada ou inválida para ${customerPhone}. Reiniciando...`);
+        sessionRecord = null;
       } else {
-        return; // Erro desconhecido, aborta
+        console.error(`[SESSÃO] Erro inesperado ao continuar sessão para ${customerPhone}:`, response?.status);
+        return;
       }
     }
 
     if (!sessionRecord) {
+      console.log(`[SESSÃO] Iniciando novo chat para ${customerPhone}`);
       tbResponseData = await startTypebotSession(connection, messageContent);
       if (tbResponseData && tbResponseData.sessionId) {
         const newSessionId = tbResponseData.sessionId;
         
         await prisma.typebotSession.upsert({
-          where: { chatwootConversationId: String(conversationId) },
+          where: { phoneNumber: customerPhone },
           update: { typebotSessionId: newSessionId },
-          create: { chatwootConversationId: String(conversationId), typebotSessionId: newSessionId }
+          create: { phoneNumber: customerPhone, typebotSessionId: newSessionId }
         });
       }
     }
@@ -121,18 +127,9 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
         if (formattedText) {
           messagesQueue.push({ type: 'text', content: formattedText });
         }
-      } else if (msgType === 'audio') {
-        const audioUrl = msg.content?.url;
-        if (audioUrl) messagesQueue.push({ type: 'audio', content: audioUrl });
-      } else if (msgType === 'image') {
-        const imageUrl = msg.content?.url;
-        if (imageUrl) messagesQueue.push({ type: 'image', content: imageUrl });
-      } else if (msgType === 'video') {
-        const videoUrl = msg.content?.url;
-        if (videoUrl) messagesQueue.push({ type: 'video', content: videoUrl });
-      } else if (msgType === 'file') {
-        const fileUrl = msg.content?.url;
-        if (fileUrl) messagesQueue.push({ type: 'file', content: fileUrl });
+      } else if (['audio', 'image', 'video', 'file'].includes(msgType)) {
+        const url = msg.content?.url;
+        if (url) messagesQueue.push({ type: msgType, content: url });
       }
     }
 
@@ -148,11 +145,12 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
       }
     }
 
+    // Enviar mensagens acumuladas
     for (const m of messagesQueue) {
       if (m.type === 'text') {
         await sendGupshupMessage(connection, customerPhone, { type: 'text', text: m.content });
         await createPrivateNote(connection, conversationId, m.content);
-      } else if (m.type === 'image' || m.type === 'video' || m.type === 'file' || m.type === 'audio') {
+      } else {
         let gupType = m.type;
         if (m.type === 'file') gupType = 'document';
         await sendGupshupMessage(connection, customerPhone, { type: gupType, url: m.content });
@@ -160,6 +158,7 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
       }
     }
 
+    // Enviar Interativo (Botões/Lista) se houver
     if (hasInput) {
       const items = inputField.items || [];
       const qtdItems = items.length;
@@ -169,31 +168,21 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
         let noteContent = '';
 
         if (qtdItems <= 3) {
-          const options = items.map((item: any, index: number) => {
+          const options = items.map((item: any) => {
             const label = (item.content || '').substring(0, 20);
-            return {
-              type: 'text',
-              title: label,
-              postbackText: label
-            };
+            return { type: 'text', title: label, postbackText: label };
           });
 
           interactivePayload = {
             type: 'quick_reply',
-            content: {
-              type: 'text',
-              text: inputBodyText
-            },
+            content: { type: 'text', text: inputBodyText },
             options: options
           };
           noteContent = `[Botões]: ${options.map((o:any) => o.title).join(', ')}`;
         } else {
           const options = items.slice(0, 10).map((item: any) => {
             const label = (item.content || '').substring(0, 24);
-            return {
-              title: label,
-              postbackText: label
-            };
+            return { title: label, postbackText: label };
           });
 
           interactivePayload = {
@@ -202,10 +191,7 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
             body: inputBodyText.substring(0, 1024),
             msgid: `list_${Date.now()}`,
             globalButtons: [{ type: 'text', title: 'Ver Opções' }],
-            items: [{
-              title: 'Escolha',
-              options: options
-            }]
+            items: [{ title: 'Escolha', options: options }]
           };
           noteContent = `[Lista]: ${options.map((r:any) => r.title).join(', ')}`;
         }
