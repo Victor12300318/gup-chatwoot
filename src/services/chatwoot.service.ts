@@ -16,7 +16,9 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
       content = gupshupPayload.payload.payload.text;
       typebotContent = content;
     } else if (messageType === 'button_reply' || messageType === 'list_reply' || messageType === 'quick_reply') {
-      content = gupshupPayload.payload.payload.title || gupshupPayload.payload.payload.reply || '[Botão/Lista Clicado]';
+      // Prioridade máxima para o valor "escondido" (postbackText ou id) para não quebrar o Typebot
+      // Se o postbackText existir, usamos ele como conteúdo real da resposta
+      content = gupshupPayload.payload.payload.postbackText || gupshupPayload.payload.payload.title || gupshupPayload.payload.payload.reply || '[Botão/Lista Clicado]';
       typebotContent = content;
     } else if (messageType === 'image') {
       content = `[Imagem] ${gupshupPayload.payload.payload.url}`;

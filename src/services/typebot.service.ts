@@ -167,10 +167,16 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
         let interactivePayload: any = {};
         let noteContent = '';
 
-        if (qtdItems <= 3) {
+        // Lógica Smart: Se algum item passar de 20 caracteres, forçamos o uso de LISTA
+        // mesmo que tenha 3 ou menos itens.
+        const anyItemTooLongForButtons = items.some((i: any) => (i.content || '').length > 20);
+        const forceList = qtdItems > 3 || anyItemTooLongForButtons;
+
+        if (!forceList) {
+          // CASO 1: Botões (Quick Reply) - Máximo 3 opções e texto curto (<20)
           const options = items.map((item: any) => {
             const label = (item.content || '').substring(0, 20);
-            return { type: 'text', title: label, postbackText: label };
+            return { type: 'text', title: label, postbackText: item.content }; // postbackText sempre completo
           });
 
           interactivePayload = {
@@ -178,11 +184,18 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
             content: { type: 'text', text: inputBodyText },
             options: options
           };
-          noteContent = `[Botões]: ${options.map((o:any) => o.title).join(', ')}`;
+          noteContent = `[Botões]: ${options.map((o: any) => o.title).join(', ')}`;
         } else {
-          const options = items.slice(0, 10).map((item: any) => {
-            const label = (item.content || '').substring(0, 24);
-            return { title: label, postbackText: label };
+          // CASO 2: Lista (List Message) - De 1 a 10 opções
+          const options = items.slice(0, 10).map((item: any, index: number) => {
+            const fullText = item.content || '';
+            const needsTruncate = fullText.length > 24;
+            
+            return {
+              title: needsTruncate ? `${index + 1}. ${fullText.substring(0, 20)}...` : fullText,
+              description: needsTruncate ? fullText.substring(0, 72) : undefined,
+              postbackText: fullText // O Typebot receberá o texto ORIGINAL e COMPLETO
+            };
           });
 
           interactivePayload = {
@@ -193,7 +206,7 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
             globalButtons: [{ type: 'text', title: 'Ver Opções' }],
             items: [{ title: 'Escolha', options: options }]
           };
-          noteContent = `[Lista]: ${options.map((r:any) => r.title).join(', ')}`;
+          noteContent = `[Lista]: ${options.map((r: any) => r.title).join(', ')}`;
         }
 
         await sendGupshupMessage(connection, customerPhone, interactivePayload);
