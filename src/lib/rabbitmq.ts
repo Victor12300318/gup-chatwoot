@@ -54,6 +54,7 @@ export const publishMessage = async (queue: string, message: any) => {
     if (ch) {
       const buffer = Buffer.from(JSON.stringify(message));
       ch.sendToQueue(queue, buffer, { persistent: true });
+      console.log(`[RABBITMQ] Mensagem publicada na fila: ${queue}`);
     } else {
       console.error(`Falha ao publicar na fila ${queue}: Canal indisponível.`);
     }

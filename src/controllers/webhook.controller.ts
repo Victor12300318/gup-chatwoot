@@ -32,7 +32,7 @@ export const handleChatwootWebhook = async (req: Request, res: Response) => {
     let isOutgoing = false;
     let messageData = payload;
 
-    if (isMessageCreated && payload.message_type === 'outgoing') {
+    if (isMessageCreated && (payload.message_type === 'outgoing' || payload.message_type === 1)) {
       isOutgoing = true;
     } else if (isConversationUpdated && payload.messages && payload.messages.length > 0) {
       const lastMessage = payload.messages[payload.messages.length - 1];

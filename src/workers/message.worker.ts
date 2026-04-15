@@ -56,6 +56,7 @@ export const startWorker = async () => {
     channel.consume(QUEUES.CHATWOOT_OUTGOING, async (msg: any) => {
       if (msg !== null) {
         try {
+          console.log('[WORKER] Mensagem retirada da fila Chatwoot (Saída).');
           const payload = JSON.parse(msg.content.toString());
           const inboxId = payload.inbox_id || (payload.inbox && payload.inbox.id);
 
