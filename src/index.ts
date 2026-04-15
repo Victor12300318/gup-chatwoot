@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import path from 'path';
 import adminRoutes from './routes/admin.routes';
 import webhookRoutes from './routes/webhook.routes';
-import { startWorker } from './workers/message.worker';
 
 dotenv.config();
 
@@ -36,9 +35,6 @@ app.get('*', (req, res) => {
 // Força o binding no IPv4 0.0.0.0
 app.listen(Number(port), '0.0.0.0', () => {
   console.log(`Servidor rodando na porta ${port}`);
-  
-  // Iniciar o worker do RabbitMQ em background
-  startWorker();
   
   // Garante que o processo não morra imediatamente
   process.send && process.send('ready');

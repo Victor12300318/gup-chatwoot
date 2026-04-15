@@ -1,13 +1,33 @@
 import { Request, Response } from 'express';
-import { publishMessage, QUEUES } from '../lib/rabbitmq';
+import { prisma } from '../prisma';
+import { processGupshupMessage } from '../services/chatwoot.service';
+import { processChatwootMessage } from '../services/gupshup.service';
+import { runTypebotFlow } from '../services/typebot.service';
 
 export const handleGupshupWebhook = async (req: Request, res: Response) => {
   try {
     const payload = req.body;
-    console.log('Webhook Gupshup recebido (Enviando para a fila):', payload?.type);
+    console.log('Webhook Gupshup recebido:', payload?.type);
 
     if (payload.type === 'message') {
-      await publishMessage(QUEUES.GUPSHUP_INCOMING, payload);
+      const appName = payload.app;
+      const customerPhone = payload.payload.source;
+      
+      const connection = await prisma.connection.findFirst({
+        where: { gupshupAppName: appName }
+      });
+
+      if (connection) {
+        processGupshupMessage(connection, payload).then(chatwootData => {
+          if (chatwootData && chatwootData.status === 'pending' && connection.typebotEnabled) {
+            runTypebotFlow(connection, chatwootData.conversationId, customerPhone, chatwootData.content).catch(err => {
+              console.error('Erro no fluxo do Typebot:', err);
+            });
+          }
+        }).catch(err => {
+          console.error('Erro ao processar mensagem Gupshup -> Chatwoot:', err);
+        });
+      }
     } else if (payload.type === 'message-event') {
       const status = payload.payload.type;
       const phone = payload.payload.destination;
@@ -24,7 +44,7 @@ export const handleGupshupWebhook = async (req: Request, res: Response) => {
 export const handleChatwootWebhook = async (req: Request, res: Response) => {
   try {
     const payload = req.body;
-    console.log('Webhook Chatwoot recebido (Enviando para a fila):', payload.event);
+    console.log('Webhook Chatwoot recebido:', payload.event);
 
     const isMessageCreated = payload.event === 'message_created';
     const isConversationUpdated = payload.event === 'conversation_updated';
@@ -43,7 +63,19 @@ export const handleChatwootWebhook = async (req: Request, res: Response) => {
     }
 
     if (isOutgoing) {
-      await publishMessage(QUEUES.CHATWOOT_OUTGOING, messageData);
+      const inboxId = payload.inbox_id || (payload.inbox && payload.inbox.id);
+      
+      if (inboxId) {
+        const connection = await prisma.connection.findFirst({
+          where: { chatwootInboxId: Number(inboxId) }
+        });
+
+        if (connection) {
+          processChatwootMessage(connection, messageData).catch(err => {
+            console.error('Erro ao processar mensagem Chatwoot -> Gupshup:', err);
+          });
+        }
+      }
     }
 
     res.status(200).send('OK');
