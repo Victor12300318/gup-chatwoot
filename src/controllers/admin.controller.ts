@@ -79,6 +79,10 @@ export const createConnection = async (req: Request, res: Response) => {
         chatwootInboxId: Number(chatwootInboxId),
         chatwootAccessToken: data.chatwootAccessToken,
         chatwootHmacToken: data.chatwootHmacToken,
+        typebotEnabled: Boolean(data.typebotEnabled),
+        typebotUrl: data.typebotUrl || null,
+        typebotId: data.typebotId || null,
+        typebotToken: data.typebotToken || null,
       }
     });
 
