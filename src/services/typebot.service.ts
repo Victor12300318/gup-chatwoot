@@ -48,12 +48,6 @@ export const startTypebotSession = async (connection: Connection, message: strin
     return null;
   }
 };
-    return response.data;
-  } catch (error: any) {
-    console.error('Erro ao iniciar Typebot session:', error?.response?.data || error.message);
-    return null;
-  }
-};
 
 export const continueTypebotSession = async (connection: Connection, sessionId: string, message: string): Promise<{ response: any, data: TypebotResponse | null }> => {
   try {
