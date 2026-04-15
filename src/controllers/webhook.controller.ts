@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { prisma } from '../prisma';
 import { publishMessage, QUEUES } from '../lib/rabbitmq';
 
 export const handleGupshupWebhook = async (req: Request, res: Response) => {

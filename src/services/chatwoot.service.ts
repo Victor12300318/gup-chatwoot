@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Connection } from '@prisma/client';
+import FormData from 'form-data';
 
 export const processGupshupMessage = async (connection: Connection, gupshupPayload: any) => {
   try {
@@ -124,14 +125,16 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
           formData.append('source_id', gupshupPayload.payload.id);
         }
         
-        // No Node.js com Axios, para enviar arquivos via FormData:
-        const blob = new Blob([buffer], { type: contentType });
-        formData.append('attachments[]', blob, fileName);
+        // No Node.js com a biblioteca form-data:
+        formData.append('attachments[]', buffer, {
+          filename: fileName,
+          contentType: contentType
+        });
 
         await axios.post(messageUrl, formData, {
           headers: {
             ...headers,
-            'Content-Type': 'multipart/form-data'
+            ...formData.getHeaders()
           }
         });
         console.log(`Mensagem com anexo enviada ao Chatwoot!`);
