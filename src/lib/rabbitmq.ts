@@ -1,8 +1,7 @@
 import * as amqp from 'amqplib';
-import { Connection, Channel } from 'amqplib';
 
-let connection: Connection | null = null;
-let channel: Channel | null = null;
+let connection: amqp.Connection | null = null;
+let channel: amqp.Channel | null = null;
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
 
@@ -15,15 +14,16 @@ export const connectRabbitMQ = async () => {
   try {
     if (!connection) {
       console.log(`Conectando ao RabbitMQ: ${RABBITMQ_URL}`);
-      connection = await amqp.connect(RABBITMQ_URL);
+      const conn = await amqp.connect(RABBITMQ_URL);
+      connection = conn;
       
-      connection.on('error', (err) => {
+      conn.on('error', (err) => {
         console.error('RabbitMQ Connection Error:', err);
         connection = null;
         channel = null;
       });
 
-      connection.on('close', () => {
+      conn.on('close', () => {
         console.warn('RabbitMQ Connection Closed. Reconnecting...');
         connection = null;
         channel = null;
@@ -32,11 +32,12 @@ export const connectRabbitMQ = async () => {
     }
 
     if (!channel && connection) {
-      channel = await connection.createChannel();
+      const ch = await connection.createChannel();
+      channel = ch;
       
       // Assert queues
-      await channel.assertQueue(QUEUES.GUPSHUP_INCOMING, { durable: true });
-      await channel.assertQueue(QUEUES.CHATWOOT_OUTGOING, { durable: true });
+      await ch.assertQueue(QUEUES.GUPSHUP_INCOMING, { durable: true });
+      await ch.assertQueue(QUEUES.CHATWOOT_OUTGOING, { durable: true });
       
       console.log('RabbitMQ Conectado e Filas configuradas com sucesso.');
     }
@@ -49,9 +50,10 @@ export const connectRabbitMQ = async () => {
 export const publishMessage = async (queue: string, message: any) => {
   try {
     if (!channel) await connectRabbitMQ();
-    if (channel) {
+    const ch = channel;
+    if (ch) {
       const buffer = Buffer.from(JSON.stringify(message));
-      channel.sendToQueue(queue, buffer, { persistent: true });
+      ch.sendToQueue(queue, buffer, { persistent: true });
     } else {
       console.error(`Falha ao publicar na fila ${queue}: Canal indisponível.`);
     }
