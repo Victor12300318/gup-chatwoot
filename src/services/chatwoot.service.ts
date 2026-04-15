@@ -77,14 +77,14 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
     // 2. Procurar ou criar Conversa
     let conversationId: number;
     
-    // Tenta buscar conversas abertas deste contato neste inbox
+    // Tenta buscar conversas abertas ou pendentes deste contato neste inbox
     const conversations = await axios.get(`${baseUrl}/contacts/${contactId}/conversations`, { headers });
-    const openConversation = conversations.data.payload.find(
-      (conv: any) => conv.inbox_id === connection.chatwootInboxId && conv.status === 'open'
+    const existingConversation = conversations.data.payload.find(
+      (conv: any) => conv.inbox_id === connection.chatwootInboxId && (conv.status === 'open' || conv.status === 'pending')
     );
 
-    if (openConversation) {
-      conversationId = openConversation.id;
+    if (existingConversation) {
+      conversationId = existingConversation.id;
     } else {
       // Criar Conversa
       const createConversation = await axios.post(`${baseUrl}/conversations`, {
@@ -149,7 +149,10 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
     console.log(`Mensagem de ${customerPhone} processada com sucesso!`);
     
     // Retorna a conversationId e o status para podermos checar no fluxo do Typebot
-    return { conversationId, status: openConversation ? openConversation.status : 'open', content: typebotContent };
+    // Se encontramos uma conversa existente ou criamos uma nova (que nasce como 'pending' no Chatwoot via API por padrão ou 'open' dependendo da config)
+    const currentStatus = existingConversation ? existingConversation.status : 'pending';
+    
+    return { conversationId, status: currentStatus, content: typebotContent };
   } catch (error: any) {
     console.error('Erro ao processar mensagem para o Chatwoot:', error?.response?.data || error.message);
     return null;
