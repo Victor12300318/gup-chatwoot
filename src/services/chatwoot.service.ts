@@ -8,18 +8,24 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
     
     // Extrai o conteúdo da mensagem baseado no tipo (text, image, etc)
     let content = '';
+    let typebotContent = ''; // Conteudo limpo para o Typebot (ex: URL direta)
     const messageType = gupshupPayload.payload.type;
     
     if (messageType === 'text') {
       content = gupshupPayload.payload.payload.text;
+      typebotContent = content;
     } else if (messageType === 'button_reply' || messageType === 'list_reply' || messageType === 'quick_reply') {
       content = gupshupPayload.payload.payload.title || gupshupPayload.payload.payload.reply || '[Botão/Lista Clicado]';
+      typebotContent = content;
     } else if (messageType === 'image') {
       content = `[Imagem] ${gupshupPayload.payload.payload.url}`;
+      typebotContent = gupshupPayload.payload.payload.url;
     } else if (messageType === 'document') {
       content = `[Documento] ${gupshupPayload.payload.payload.url}`;
+      typebotContent = gupshupPayload.payload.payload.url;
     } else {
       content = `[Mensagem tipo ${messageType}]`;
+      typebotContent = content;
     }
 
     const headers = {
@@ -138,7 +144,39 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
     }
 
     console.log(`Mensagem de ${customerPhone} processada com sucesso!`);
+    
+    // Retorna a conversationId e o status para podermos checar no fluxo do Typebot
+    return { conversationId, status: openConversation ? openConversation.status : 'open', content: typebotContent };
   } catch (error: any) {
     console.error('Erro ao processar mensagem para o Chatwoot:', error?.response?.data || error.message);
+    return null;
+  }
+};
+
+export const getConversationStatus = async (connection: Connection, conversationId: number): Promise<string | null> => {
+  try {
+    const baseUrl = `${connection.chatwootUrl}/api/v1/accounts/${connection.chatwootAccountId}`;
+    const response = await axios.get(`${baseUrl}/conversations/${conversationId}`, {
+      headers: { api_access_token: connection.chatwootAccessToken }
+    });
+    return response.data.status;
+  } catch (error) {
+    console.error('Erro ao buscar status da conversa no Chatwoot:', error);
+    return null;
+  }
+};
+
+export const createPrivateNote = async (connection: Connection, conversationId: number, content: string) => {
+  try {
+    const baseUrl = `${connection.chatwootUrl}/api/v1/accounts/${connection.chatwootAccountId}`;
+    await axios.post(`${baseUrl}/conversations/${conversationId}/messages`, {
+      content: `🤖 [BOT]: ${content}`,
+      message_type: 'outgoing',
+      private: true
+    }, {
+      headers: { api_access_token: connection.chatwootAccessToken }
+    });
+  } catch (error) {
+    console.error('Erro ao criar nota privada no Chatwoot:', error);
   }
 };

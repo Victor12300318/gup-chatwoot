@@ -1,6 +1,28 @@
 import axios from 'axios';
 import { Connection } from '@prisma/client';
 
+export const sendGupshupMessage = async (connection: Connection, customerPhone: string, messageObject: any) => {
+  try {
+    const params = new URLSearchParams();
+    params.append('channel', 'whatsapp');
+    params.append('source', connection.gupshupSourcePhone);
+    params.append('destination', customerPhone);
+    params.append('src.name', connection.gupshupAppName);
+    params.append('message', JSON.stringify(messageObject));
+
+    const response = await axios.post('https://api.gupshup.io/wa/api/v1/msg', params.toString(), {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'apikey': connection.gupshupApiKey
+      }
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao enviar mensagem Gupshup genérica:', error?.response?.data || error.message);
+    throw error;
+  }
+};
+
 export const processChatwootMessage = async (connection: Connection, chatwootPayload: any) => {
   try {
     // Tenta pegar o telefone de vários lugares possíveis no payload do Chatwoot

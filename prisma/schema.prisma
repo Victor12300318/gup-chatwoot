@@ -20,6 +20,18 @@ model Connection {
   chatwootAccessToken String
   chatwootHmacToken   String?
 
+  typebotEnabled      Boolean  @default(false)
+  typebotUrl          String?
+  typebotId           String?
+  typebotToken        String?
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+}
+
+model TypebotSession {
+  id                     String   @id @default(uuid())
+  chatwootConversationId String   @unique
+  typebotSessionId       String
+  updatedAt              DateTime @updatedAt
 }

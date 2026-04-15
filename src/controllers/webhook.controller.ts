@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { processGupshupMessage } from '../services/chatwoot.service';
 import { processChatwootMessage } from '../services/gupshup.service';
+import { runTypebotFlow } from '../services/typebot.service';
 
 export const handleGupshupWebhook = async (req: Request, res: Response) => {
   try {
@@ -21,8 +22,15 @@ export const handleGupshupWebhook = async (req: Request, res: Response) => {
 
       if (connection) {
         console.log(`Conexão encontrada para ${appName}. Processando mensagem de ${customerPhone}...`);
-        // Enviar assíncronamente para o Chatwoot
-        processGupshupMessage(connection, payload).catch(err => {
+        // Enviar para o Chatwoot e esperar o retorno
+        processGupshupMessage(connection, payload).then(chatwootData => {
+          if (chatwootData && chatwootData.status === 'pending' && connection.typebotEnabled) {
+            console.log(`Conversa ${chatwootData.conversationId} está pendente. Iniciando Typebot...`);
+            runTypebotFlow(connection, chatwootData.conversationId, customerPhone, chatwootData.content).catch(err => {
+              console.error('Erro no fluxo do Typebot:', err);
+            });
+          }
+        }).catch(err => {
           console.error('Erro ao processar mensagem Gupshup -> Chatwoot:', err);
         });
       } else {
