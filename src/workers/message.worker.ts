@@ -18,7 +18,7 @@ export const startWorker = async () => {
     console.log('Worker iniciado. Aguardando mensagens nas filas...');
 
     // Consumir fila Gupshup (Entrada)
-    channel.consume(QUEUES.GUPSHUP_INCOMING, async (msg) => {
+    channel.consume(QUEUES.GUPSHUP_INCOMING, async (msg: any) => {
       if (msg !== null) {
         try {
           const payload = JSON.parse(msg.content.toString());
@@ -53,7 +53,7 @@ export const startWorker = async () => {
     });
 
     // Consumir fila Chatwoot (Saída)
-    channel.consume(QUEUES.CHATWOOT_OUTGOING, async (msg) => {
+    channel.consume(QUEUES.CHATWOOT_OUTGOING, async (msg: any) => {
       if (msg !== null) {
         try {
           const payload = JSON.parse(msg.content.toString());

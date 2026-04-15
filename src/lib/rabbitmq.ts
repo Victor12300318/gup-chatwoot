@@ -1,7 +1,7 @@
 import * as amqp from 'amqplib';
 
-let connection: amqp.Connection | null = null;
-let channel: amqp.Channel | null = null;
+let connection: any = null;
+let channel: any = null;
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
 
@@ -17,7 +17,7 @@ export const connectRabbitMQ = async () => {
       const conn = await amqp.connect(RABBITMQ_URL);
       connection = conn;
       
-      conn.on('error', (err) => {
+      conn.on('error', (err: any) => {
         console.error('RabbitMQ Connection Error:', err);
         connection = null;
         channel = null;
