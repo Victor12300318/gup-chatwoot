@@ -189,22 +189,36 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
           // CASO 2: Lista (List Message) - De 1 a 10 opções
           const options = items.slice(0, 10).map((item: any, index: number) => {
             const fullText = item.content || '';
-            const needsTruncate = fullText.length > 24;
+            const prefix = `${index + 1}. `;
+            const maxTitleLength = 24;
+            
+            let displayTitle = fullText;
+            const needsTruncate = fullText.length > maxTitleLength;
+
+            if (needsTruncate) {
+              // Deixa espaço para o prefixo (ex: "1. ") e para as reticências "..."
+              // 24 - (comprimento do prefixo) - 3 das reticências
+              const availableSpace = maxTitleLength - prefix.length - 3;
+              displayTitle = `${prefix}${fullText.substring(0, availableSpace)}...`;
+            }
             
             return {
-              title: needsTruncate ? `${index + 1}. ${fullText.substring(0, 20)}...` : fullText,
-              description: needsTruncate ? fullText.substring(0, 72) : undefined,
+              title: displayTitle,
+              description: fullText.length > 24 ? fullText.substring(0, 72) : undefined,
               postbackText: fullText // O Typebot receberá o texto ORIGINAL e COMPLETO
             };
           });
 
           interactivePayload = {
             type: 'list',
-            title: 'Menu',
+            title: 'Menu'.substring(0, 24),
             body: inputBodyText.substring(0, 1024),
             msgid: `list_${Date.now()}`,
-            globalButtons: [{ type: 'text', title: 'Ver Opções' }],
-            items: [{ title: 'Escolha', options: options }]
+            globalButtons: [{ type: 'text', title: 'Ver Opções'.substring(0, 20) }],
+            items: [{
+              title: 'Escolha'.substring(0, 24),
+              options: options
+            }]
           };
           noteContent = `[Lista]: ${options.map((r: any) => r.title).join(', ')}`;
         }
