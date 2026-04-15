@@ -93,6 +93,35 @@ export const createConnection = async (req: Request, res: Response) => {
   }
 };
 
+export const updateConnection = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const data = req.body;
+
+    const connection = await prisma.connection.update({
+      where: { id },
+      data: {
+        gupshupSourcePhone: data.gupshupSourcePhone,
+        gupshupAppName: data.gupshupAppName,
+        gupshupApiKey: data.gupshupApiKey,
+        chatwootUrl: data.chatwootUrl,
+        chatwootAccountId: Number(data.chatwootAccountId),
+        chatwootInboxId: Number(data.chatwootInboxId),
+        chatwootAccessToken: data.chatwootAccessToken,
+        chatwootHmacToken: data.chatwootHmacToken,
+        typebotEnabled: Boolean(data.typebotEnabled),
+        typebotUrl: data.typebotUrl || null,
+        typebotId: data.typebotId || null,
+        typebotToken: data.typebotToken || null,
+      }
+    });
+    res.json(connection);
+  } catch (error) {
+    console.error('Error updating connection:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const deleteConnection = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

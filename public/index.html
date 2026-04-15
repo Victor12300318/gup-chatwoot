@@ -425,7 +425,10 @@
                   <span class="info-label">Chatwoot Webhook URL (Copy this)</span>
                   <span class="info-value" style="color: var(--accent); cursor: pointer;" onclick="navigator.clipboard.writeText('${baseUrl}/webhooks/chatwoot')">${baseUrl}/webhooks/chatwoot</span>
                 </div>
-                <button class="btn btn-danger" style="margin-top: 1rem; width: fit-content;" onclick="deleteConnection('${conn.id}')">TERMINATE ROUTE</button>
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                  <button class="btn btn-primary" style="flex: 1;" onclick='editConnection(${JSON.stringify(conn).replace(/'/g, "&#39;")})'>EDIT ROUTE</button>
+                  <button class="btn btn-danger" style="flex: 1;" onclick="deleteConnection('${conn.id}')">TERMINATE</button>
+                </div>
               </div>
             `;
             grid.appendChild(card);
@@ -503,8 +506,12 @@
         submitBtn.disabled = true;
 
         try {
-          const res = await fetch(API_URL, {
-            method: 'POST',
+          const isEdit = !!editingConnectionId;
+          const url = isEdit ? `${API_URL}/${editingConnectionId}` : API_URL;
+          const method = isEdit ? 'PUT' : 'POST';
+
+          const res = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
           });
@@ -514,6 +521,7 @@
             fetchConnections();
             e.target.reset();
             document.getElementById('autoCreate').dispatchEvent(new Event('change'));
+            document.getElementById('tbEnabled').dispatchEvent(new Event('change'));
           } else {
             const errData = await res.json();
             alert('Failed to deploy route: ' + (errData.error || 'Check the payload.'));
@@ -526,12 +534,44 @@
         }
       });
 
+      let editingConnectionId = null;
+
       function openModal() {
+        editingConnectionId = null;
+        document.getElementById('connectionForm').reset();
+        document.getElementById('autoCreate').dispatchEvent(new Event('change'));
+        document.getElementById('tbEnabled').dispatchEvent(new Event('change'));
+        document.querySelector('.modal-title').innerText = 'NEW CONNECTION';
         document.getElementById('addModal').classList.add('active');
       }
 
       function closeModal() {
         document.getElementById('addModal').classList.remove('active');
+      }
+
+      function editConnection(conn) {
+        editingConnectionId = conn.id;
+        document.querySelector('.modal-title').innerText = 'EDIT CONNECTION';
+        
+        document.getElementById('gupPhone').value = conn.gupshupSourcePhone;
+        document.getElementById('gupApp').value = conn.gupshupAppName;
+        document.getElementById('gupKey').value = conn.gupshupApiKey;
+        
+        document.getElementById('cwUrl').value = conn.chatwootUrl;
+        document.getElementById('cwAccId').value = conn.chatwootAccountId;
+        document.getElementById('cwInboxId').value = conn.chatwootInboxId;
+        document.getElementById('cwToken').value = conn.chatwootAccessToken;
+        
+        document.getElementById('autoCreate').checked = false;
+        document.getElementById('autoCreate').dispatchEvent(new Event('change'));
+
+        document.getElementById('tbEnabled').checked = !!conn.typebotEnabled;
+        document.getElementById('tbUrl').value = conn.typebotUrl || '';
+        document.getElementById('tbId').value = conn.typebotId || '';
+        document.getElementById('tbToken').value = conn.typebotToken || '';
+        document.getElementById('tbEnabled').dispatchEvent(new Event('change'));
+
+        document.getElementById('addModal').classList.add('active');
       }
 
       // Initial load
