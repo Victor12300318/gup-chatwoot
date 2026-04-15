@@ -1,5 +1,8 @@
 import axios from 'axios';
 import { Connection } from '@prisma/client';
+import { prisma } from '../prisma';
+import { sendGupshupMessage } from './gupshup.service';
+import { createPrivateNote } from './chatwoot.service';
 
 export interface TypebotResponse {
   sessionId?: string;
@@ -69,10 +72,6 @@ export const parseTypebotRichText = (richTextList: any[]): string => {
 
   return finalText.join('\n');
 };
-
-import { prisma } from '../prisma';
-import { sendGupshupMessage } from './gupshup.service';
-import { createPrivateNote } from './chatwoot.service';
 
 export const runTypebotFlow = async (connection: Connection, conversationId: number, customerPhone: string, messageContent: string) => {
   if (!connection.typebotEnabled || !connection.typebotUrl || !connection.typebotId) return;
