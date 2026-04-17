@@ -46,26 +46,18 @@ export const handleChatwootWebhook = async (req: Request, res: Response) => {
       return res.status(200).send('OK');
     }
 
-    const isMessageCreated = payload.event === 'message_created';
-    const isConversationUpdated = payload.event === 'conversation_updated';
-    
-    let isOutgoing = false;
-    let messageData = payload;
-
-    // Detectar se a mensagem é do Agente (Outgoing)
-    if (isMessageCreated) {
-      if (payload.message_type === 'outgoing' || payload.message_type === 1) {
-        isOutgoing = true;
-      }
-    } else if (isConversationUpdated && payload.messages && payload.messages.length > 0) {
-      const lastMessage = payload.messages[payload.messages.length - 1];
-      if (lastMessage.message_type === 1 || lastMessage.message_type === 'outgoing') {
-        isOutgoing = true;
-        messageData = { ...payload, ...lastMessage };
-      }
+    // 1. REGRAS DE FILTRO: Só processaremos criação de novas mensagens.
+    // Ignoramos conversation_updated para evitar duplicação (o bug estava aqui).
+    if (payload.event !== 'message_created') {
+      return res.status(200).send('OK');
     }
 
-    if (!isOutgoing) return res.status(200).send('OK');
+    // 2. Detectar se a mensagem é do Agente ou do Bot (Outgoing / tipo 1)
+    const isOutgoing = payload.message_type === 'outgoing' || payload.message_type === 1;
+    
+    if (!isOutgoing) {
+      return res.status(200).send('OK');
+    }
 
     const inboxId = payload.inbox_id || (payload.inbox && payload.inbox.id);
     if (!inboxId) return res.status(200).send('OK');
@@ -75,8 +67,8 @@ export const handleChatwootWebhook = async (req: Request, res: Response) => {
     });
 
     if (connection) {
-      console.log(`[SYNC] Enviando resposta humana para Gupshup: ${connection.gupshupAppName}`);
-      processChatwootMessage(connection, messageData).catch(err => {
+      console.log(`[SYNC] Enviando resposta para Gupshup: ${connection.gupshupAppName} (Message ID: ${payload.id})`);
+      processChatwootMessage(connection, payload).catch(err => {
         console.error('Erro ao processar mensagem Chatwoot -> Gupshup:', err);
       });
     }
