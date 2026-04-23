@@ -74,7 +74,17 @@ export const processChatwootMessage = async (connection: Connection, chatwootPay
       });
     };
 
-    // 1. Se houver anexos, envia cada um
+    // 1. Envia o texto primeiro, se houver
+    if (content) {
+      const textMessage = {
+        type: 'text',
+        text: content
+      };
+      const res = await sendGupshup(textMessage);
+      console.log('Texto enviado para Gupshup:', res.data);
+    }
+
+    // 2. Envia os anexos separadamente (sem legenda)
     if (attachments && attachments.length > 0) {
       for (const attachment of attachments) {
         let type = 'file';
@@ -94,23 +104,9 @@ export const processChatwootMessage = async (connection: Connection, chatwootPay
           }
         }
 
-        // Se tiver texto junto com a mídia (legenda)
-        if (content && (type === 'image' || type === 'file' || type === 'video')) {
-          messageObject.caption = content;
-        }
-
         const res = await sendGupshup(messageObject);
         console.log(`Anexo (${type}) enviado para Gupshup:`, res.data);
       }
-    } 
-    // 2. Se não houver anexos, envia apenas o texto
-    else if (content) {
-      const messageObject = {
-        type: 'text',
-        text: content
-      };
-      const res = await sendGupshup(messageObject);
-      console.log('Texto enviado para Gupshup:', res.data);
     }
 
     console.log(`Processamento concluído para ${customerPhone}`);
