@@ -20,11 +20,13 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
       // Se o postbackText existir, usamos ele como conteúdo real da resposta
       content = gupshupPayload.payload.payload.postbackText || gupshupPayload.payload.payload.title || gupshupPayload.payload.payload.reply || '[Botão/Lista Clicado]';
       typebotContent = content;
-    } else if (messageType === 'image') {
-      content = `[Imagem] ${gupshupPayload.payload.payload.url}`;
+    } else if (messageType === 'image' || messageType === 'video') {
+      const caption = gupshupPayload.payload.payload.caption || '';
+      content = caption; // Send caption as the message content
       typebotContent = gupshupPayload.payload.payload.url;
-    } else if (messageType === 'document') {
-      content = `[Documento] ${gupshupPayload.payload.payload.url}`;
+    } else if (messageType === 'document' || messageType === 'audio') {
+      const caption = gupshupPayload.payload.payload.caption || '';
+      content = caption;
       typebotContent = gupshupPayload.payload.payload.url;
     } else {
       content = `[Mensagem tipo ${messageType}]`;
