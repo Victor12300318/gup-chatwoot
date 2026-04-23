@@ -82,13 +82,20 @@ export const processChatwootMessage = async (connection: Connection, chatwootPay
         if (attachment.file_type === 'audio') type = 'audio';
         if (attachment.file_type === 'video') type = 'video';
 
-        const messageObject: any = {
-          type: type,
-          url: attachment.data_url
-        };
+        const messageObject: any = { type };
 
-        // Se for imagem ou arquivo e tiver legenda (caption), adicionamos
-        if (content && (type === 'image' || type === 'file')) {
+        if (type === 'image') {
+          messageObject.originalUrl = attachment.data_url;
+          messageObject.previewUrl = attachment.data_url;
+        } else {
+          messageObject.url = attachment.data_url;
+          if (type === 'file') {
+            messageObject.filename = attachment.data_url.split('/').pop() || 'document';
+          }
+        }
+
+        // Se tiver texto junto com a mídia (legenda)
+        if (content && (type === 'image' || type === 'file' || type === 'video')) {
           messageObject.caption = content;
         }
 
