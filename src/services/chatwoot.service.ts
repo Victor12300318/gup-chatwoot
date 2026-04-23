@@ -121,7 +121,9 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
         const contentType = fileResponse.headers['content-type'] || 'application/octet-stream';
 
         const formData = new FormData();
-        formData.append('content', content);
+        if (content) {
+          formData.append('content', content);
+        }
         formData.append('message_type', 'incoming');
         if (gupshupPayload.payload.id) {
           formData.append('source_id', gupshupPayload.payload.id);
