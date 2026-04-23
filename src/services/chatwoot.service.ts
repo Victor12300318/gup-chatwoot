@@ -144,9 +144,13 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
         console.log(`Mensagem com anexo enviada ao Chatwoot!`);
       } catch (mediaError) {
         console.error('Erro ao processar anexo, enviando como texto apenas:', mediaError);
-        await axios.post(messageUrl, messagePayload, { headers });
+        
+        // Remove attachments if media processing fails and just send content
+        if (content) {
+          await axios.post(messageUrl, { ...messagePayload, content }, { headers });
+        }
       }
-    } else {
+    } else if (content) {
       await axios.post(messageUrl, messagePayload, { headers });
     }
 
