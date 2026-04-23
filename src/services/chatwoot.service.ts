@@ -99,11 +99,14 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
 
     // 3. Criar a Mensagem na Conversa
     const messagePayload: any = {
-      content: content,
       message_type: 'incoming',
       private: false,
       source_id: gupshupPayload.payload.id // ID da mensagem no Gupshup para evitar duplicação no Chatwoot
     };
+
+    if (content) {
+      messagePayload.content = content;
+    }
 
     const messageUrl = `${baseUrl}/conversations/${conversationId}/messages`;
 
