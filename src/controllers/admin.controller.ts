@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import axios from 'axios';
+import { clearConnectionCache } from '../lib/cache';
 
 export const getConnections = async (req: Request, res: Response) => {
   try {
@@ -86,6 +87,8 @@ export const createConnection = async (req: Request, res: Response) => {
       }
     });
 
+    clearConnectionCache();
+
     res.status(201).json(newConnection);
   } catch (error) {
     console.error('Error creating connection:', error);
@@ -115,6 +118,9 @@ export const updateConnection = async (req: Request, res: Response) => {
         typebotToken: data.typebotToken || null,
       }
     });
+
+    clearConnectionCache();
+
     res.json(connection);
   } catch (error) {
     console.error('Error updating connection:', error);
@@ -126,6 +132,9 @@ export const deleteConnection = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await prisma.connection.delete({ where: { id } });
+    
+    clearConnectionCache();
+
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting connection:', error);

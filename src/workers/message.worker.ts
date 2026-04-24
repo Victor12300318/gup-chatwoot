@@ -3,7 +3,7 @@ import { redisConnection } from '../lib/queue';
 import { processGupshupMessage } from '../services/chatwoot.service';
 import { processChatwootMessage } from '../services/gupshup.service';
 import { runTypebotFlow } from '../services/typebot.service';
-import { prisma } from '../prisma';
+import { getCachedConnectionById } from '../lib/cache';
 
 export const startWorkers = () => {
   console.log('👷 Workers iniciados. Aguardando mensagens nas filas...');
@@ -11,7 +11,7 @@ export const startWorkers = () => {
   // Worker: Gupshup -> Chatwoot
   new Worker('chatwoot-queue', async (job: Job) => {
     const { connectionId, payload } = job.data;
-    const connection = await prisma.connection.findUnique({ where: { id: connectionId } });
+    const connection = await getCachedConnectionById(connectionId);
     if (connection) {
       await processGupshupMessage(connection, payload);
     }
@@ -20,7 +20,7 @@ export const startWorkers = () => {
   // Worker: Chatwoot -> Gupshup
   new Worker('gupshup-queue', async (job: Job) => {
     const { connectionId, payload } = job.data;
-    const connection = await prisma.connection.findUnique({ where: { id: connectionId } });
+    const connection = await getCachedConnectionById(connectionId);
     if (connection) {
       await processChatwootMessage(connection, payload);
     }
@@ -29,7 +29,7 @@ export const startWorkers = () => {
   // Worker: Bot Typebot
   new Worker('typebot-queue', async (job: Job) => {
     const { connectionId, conversationId, customerPhone, messageContent } = job.data;
-    const connection = await prisma.connection.findUnique({ where: { id: connectionId } });
+    const connection = await getCachedConnectionById(connectionId);
     if (connection) {
       await runTypebotFlow(connection, conversationId, customerPhone, messageContent);
     }

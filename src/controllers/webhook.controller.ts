@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { prisma } from '../prisma';
 import crypto from 'crypto';
 import { chatwootQueue, gupshupQueue, typebotQueue } from '../lib/queue';
+import { getCachedConnectionByApp, getCachedConnectionByInbox } from '../lib/cache';
 
 export const handleGupshupWebhook = async (req: Request, res: Response) => {
   try {
@@ -11,9 +11,7 @@ export const handleGupshupWebhook = async (req: Request, res: Response) => {
     if (payload.type === 'message') {
       const appName = payload.app;
       
-      const connection = await prisma.connection.findFirst({
-        where: { gupshupAppName: appName }
-      });
+      const connection = await getCachedConnectionByApp(appName);
 
       if (connection) {
         // Apenas adiciona a mensagem na fila para o Chatwoot.
@@ -64,9 +62,7 @@ export const handleChatwootWebhook = async (req: Request, res: Response) => {
     const inboxId = payload.inbox_id || (payload.inbox && payload.inbox.id);
     if (!inboxId) return res.status(200).send('OK');
 
-    const connection = await prisma.connection.findFirst({
-      where: { chatwootInboxId: Number(inboxId) }
-    });
+    const connection = await getCachedConnectionByInbox(Number(inboxId));
 
     if (connection) {
       if (connection.chatwootHmacToken) {
@@ -124,9 +120,7 @@ export const handleChatwootBotWebhook = async (req: Request, res: Response) => {
     const inboxId = payload.inbox_id || (payload.inbox && payload.inbox.id);
     if (!inboxId) return res.status(200).send('OK');
 
-    const connection = await prisma.connection.findFirst({
-      where: { chatwootInboxId: Number(inboxId) }
-    });
+    const connection = await getCachedConnectionByInbox(Number(inboxId));
 
     if (!connection || !connection.typebotEnabled) {
       console.log('[BOT] Conexão não encontrada ou bot desativado.');
