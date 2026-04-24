@@ -17,7 +17,9 @@ const app = express();
 app.set('trust proxy', 1);
 const port = process.env.PORT || 3000;
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
 app.use(cors());
 
 // Rate Limiting
