@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
-import { processGupshupMessage } from '../services/chatwoot.service';
-import { processChatwootMessage } from '../services/gupshup.service';
-import { runTypebotFlow } from '../services/typebot.service';
 import crypto from 'crypto';
+import { chatwootQueue, gupshupQueue, typebotQueue } from '../lib/queue';
 
 export const handleGupshupWebhook = async (req: Request, res: Response) => {
   try {
@@ -18,10 +16,13 @@ export const handleGupshupWebhook = async (req: Request, res: Response) => {
       });
 
       if (connection) {
-        // Apenas processa a mensagem para o Chatwoot.
-        // O disparo do Typebot agora é feito via Webhook do Chatwoot (Agent Bot).
-        processGupshupMessage(connection, payload).catch(err => {
-          console.error('Erro ao processar mensagem Gupshup -> Chatwoot:', err);
+        // Apenas adiciona a mensagem na fila para o Chatwoot.
+        chatwootQueue.add('process-gupshup', {
+          connectionId: connection.id,
+          payload
+        }, {
+          removeOnComplete: true,
+          removeOnFail: false
         });
       }
     } else if (payload.type === 'message-event') {
@@ -87,8 +88,12 @@ export const handleChatwootWebhook = async (req: Request, res: Response) => {
       }
 
       console.log(`[SYNC] Enviando resposta para Gupshup: ${connection.gupshupAppName} (Message ID: ${payload.id})`);
-      processChatwootMessage(connection, payload).catch(err => {
-        console.error('Erro ao processar mensagem Chatwoot -> Gupshup:', err);
+      gupshupQueue.add('process-chatwoot', {
+        connectionId: connection.id,
+        payload
+      }, {
+        removeOnComplete: true,
+        removeOnFail: false
       });
     }
 
@@ -163,8 +168,14 @@ export const handleChatwootBotWebhook = async (req: Request, res: Response) => {
         customerPhone = customerPhone.replace(/\D/g, '');
         console.log(`[BOT] Acionando Typebot via Agent Bot para ${customerPhone} na conversa ${conversationId}`);
         
-        runTypebotFlow(connection, conversationId, customerPhone, messageContent).catch(err => {
-          console.error('Erro no fluxo do Typebot acionado pelo Agent Bot:', err);
+        typebotQueue.add('process-typebot', {
+          connectionId: connection.id,
+          conversationId,
+          customerPhone,
+          messageContent
+        }, {
+          removeOnComplete: true,
+          removeOnFail: false
         });
       }
     } else {

@@ -4,8 +4,12 @@ import dotenv from 'dotenv';
 import path from 'path';
 import adminRoutes from './routes/admin.routes';
 import webhookRoutes from './routes/webhook.routes';
+import { startWorkers } from './workers/message.worker';
 
 dotenv.config();
+
+// Start background workers
+startWorkers();
 
 const app = express();
 app.set('trust proxy', 1);
