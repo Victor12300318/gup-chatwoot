@@ -29,11 +29,6 @@ export const createConnection = async (req: Request, res: Response) => {
   try {
     const data = req.body;
     
-    // Basic validation
-    if (!data.gupshupSourcePhone || !data.gupshupAppName || !data.gupshupApiKey || !data.chatwootUrl || !data.chatwootAccountId || !data.chatwootAccessToken) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
     let chatwootInboxId = data.chatwootInboxId;
 
     // Auto-create Inbox in Chatwoot if requested

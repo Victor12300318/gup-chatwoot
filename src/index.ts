@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import adminRoutes from './routes/admin.routes';
@@ -15,7 +17,23 @@ const app = express();
 app.set('trust proxy', 1);
 const port = process.env.PORT || 3000;
 
+app.use(helmet());
 app.use(cors());
+
+// Rate Limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // Limit each IP to 200 requests per `window` (here, per 15 minutes)
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const webhookLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 1000, // Webhooks can have high volume
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use(express.json({
   verify: (req: any, res, buf) => {
     req.rawBody = buf;
@@ -24,8 +42,8 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true }));
 
 // Rotas da API
-app.use('/api/connections', adminRoutes);
-app.use('/webhooks', webhookRoutes);
+app.use('/api/connections', apiLimiter, adminRoutes);
+app.use('/webhooks', webhookLimiter, webhookRoutes);
 
 // Healthcheck extremamente rápido para o Easypanel
 app.get('/health', (req, res) => {
