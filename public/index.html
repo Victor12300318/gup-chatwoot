@@ -379,10 +379,33 @@
     <script>
       const API_URL = '/api/connections';
 
+      function getApiKey() {
+        return localStorage.getItem('admin_api_key') || '';
+      }
+
+      function getHeaders() {
+        return {
+          'Content-Type': 'application/json',
+          'x-api-key': getApiKey()
+        };
+      }
+
       async function fetchConnections() {
         const grid = document.getElementById('connectionsGrid');
         try {
-          const res = await fetch(API_URL);
+          const res = await fetch(API_URL, { headers: getHeaders() });
+          
+          if (res.status === 401) {
+            const key = prompt('API Key Required (or invalid). Enter ADMIN_API_KEY:');
+            if (key) {
+              localStorage.setItem('admin_api_key', key);
+              return fetchConnections();
+            } else {
+              grid.innerHTML = `<div class="empty-state" style="color: var(--danger);">Unauthorized. Refresh to enter API key.</div>`;
+              return;
+            }
+          }
+
           const data = await res.json();
           
           grid.innerHTML = '';
@@ -448,7 +471,16 @@
 
       async function deleteConnection(id) {
         if(confirm('Are you sure you want to terminate this route?')) {
-          await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+          const res = await fetch(`${API_URL}/${id}`, { 
+            method: 'DELETE',
+            headers: getHeaders()
+          });
+          if (res.status === 401) {
+            alert('Unauthorized. Invalid API Key.');
+            localStorage.removeItem('admin_api_key');
+            fetchConnections();
+            return;
+          }
           fetchConnections();
         }
       }
@@ -520,10 +552,18 @@
 
           const res = await fetch(url, {
             method: method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: getHeaders(),
             body: JSON.stringify(payload)
           });
           
+          if (res.status === 401) {
+            alert('Unauthorized. Invalid API Key.');
+            localStorage.removeItem('admin_api_key');
+            closeModal();
+            fetchConnections();
+            return;
+          }
+
           if(res.ok) {
             closeModal();
             fetchConnections();
