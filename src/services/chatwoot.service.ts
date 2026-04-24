@@ -118,8 +118,8 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
         const fileUrl = gupshupPayload.payload.payload.url;
         console.log(`Baixando mídia da Gupshup: ${fileUrl}`);
         
-        const fileResponse = await axios.get(fileUrl, { responseType: 'arraybuffer' });
-        const buffer = Buffer.from(fileResponse.data);
+        const fileResponse = await axios.get(fileUrl, { responseType: 'stream' });
+        const stream = fileResponse.data;
         
         // Extrair nome do arquivo da URL ou gerar um
         const fileName = fileUrl.split('/').pop() || `file_${Date.now()}`;
@@ -135,7 +135,7 @@ export const processGupshupMessage = async (connection: Connection, gupshupPaylo
         }
         
         // No Node.js com a biblioteca form-data:
-        formData.append('attachments[]', buffer, {
+        formData.append('attachments[]', stream, {
           filename: fileName,
           contentType: contentType as string
         });
