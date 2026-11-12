@@ -28,11 +28,11 @@ export const getConnection = async (req: Request, res: Response) => {
 export const createConnection = async (req: Request, res: Response) => {
   try {
     const data = req.body;
-    
+    const provider = data.provider || 'gupshup';
     let chatwootInboxId = data.chatwootInboxId;
 
-    // Auto-create Inbox in Chatwoot if requested
-    if (data.autoCreateInbox) {
+    // Auto-create Inbox in Chatwoot only if requested and for Gupshup provider
+    if (provider === 'gupshup' && data.autoCreateInbox) {
       const baseUrl = req.protocol + '://' + req.get('host');
       const webhookUrl = `${baseUrl}/webhooks/chatwoot`;
 
@@ -67,14 +67,18 @@ export const createConnection = async (req: Request, res: Response) => {
 
     const newConnection = await prisma.connection.create({
       data: {
-        gupshupSourcePhone: data.gupshupSourcePhone,
-        gupshupAppName: data.gupshupAppName,
-        gupshupApiKey: data.gupshupApiKey,
+        provider,
+        gupshupSourcePhone: data.gupshupSourcePhone || null,
+        gupshupAppName: data.gupshupAppName || null,
+        gupshupApiKey: data.gupshupApiKey || null,
+        whatsappPhoneId: data.whatsappPhoneId || null,
+        whatsappToken: data.whatsappToken || null,
+        whatsappSourcePhone: data.whatsappSourcePhone || null,
         chatwootUrl: data.chatwootUrl,
         chatwootAccountId: Number(data.chatwootAccountId),
         chatwootInboxId: Number(chatwootInboxId),
         chatwootAccessToken: data.chatwootAccessToken,
-        chatwootHmacToken: data.chatwootHmacToken,
+        chatwootHmacToken: data.chatwootHmacToken || null,
         typebotEnabled: Boolean(data.typebotEnabled),
         typebotUrl: data.typebotUrl || null,
         typebotId: data.typebotId || null,
@@ -99,15 +103,19 @@ export const updateConnection = async (req: Request, res: Response) => {
     const connection = await prisma.connection.update({
       where: { id },
       data: {
+        ...(data.provider ? { provider: data.provider } : {}),
         gupshupSourcePhone: data.gupshupSourcePhone,
         gupshupAppName: data.gupshupAppName,
         gupshupApiKey: data.gupshupApiKey,
+        whatsappPhoneId: data.whatsappPhoneId,
+        whatsappToken: data.whatsappToken,
+        whatsappSourcePhone: data.whatsappSourcePhone,
         chatwootUrl: data.chatwootUrl,
-        chatwootAccountId: Number(data.chatwootAccountId),
+        ...(data.chatwootAccountId ? { chatwootAccountId: Number(data.chatwootAccountId) } : {}),
         ...(data.chatwootInboxId ? { chatwootInboxId: Number(data.chatwootInboxId) } : {}),
         chatwootAccessToken: data.chatwootAccessToken,
         chatwootHmacToken: data.chatwootHmacToken || null,
-        typebotEnabled: Boolean(data.typebotEnabled),
+        typebotEnabled: data.typebotEnabled !== undefined ? Boolean(data.typebotEnabled) : undefined,
         typebotUrl: data.typebotUrl || null,
         typebotId: data.typebotId || null,
         typebotToken: data.typebotToken || null,

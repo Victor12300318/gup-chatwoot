@@ -2,6 +2,11 @@ import axios from 'axios';
 import { Connection } from '@prisma/client';
 
 export const sendGupshupMessage = async (connection: Connection, customerPhone: string, messageObject: any) => {
+  if (!connection.gupshupSourcePhone || !connection.gupshupAppName || !connection.gupshupApiKey) {
+    console.error('Dados da Gupshup incompletos na conexão.');
+    return;
+  }
+
   try {
     const params = new URLSearchParams();
     params.append('channel', 'whatsapp');
@@ -51,10 +56,15 @@ export const processChatwootMessage = async (connection: Connection, chatwootPay
     const content = chatwootPayload.content || '';
     const attachments = chatwootPayload.attachments;
 
+    if (connection.provider === 'whatsapp_cloud' || !connection.gupshupSourcePhone || !connection.gupshupAppName || !connection.gupshupApiKey) {
+      console.log(`[SYNC] Conexão ${connection.id} usa provedor ${connection.provider}. Envio via Gupshup ignorado.`);
+      return;
+    }
+
     console.log(`Preparando envio Gupshup para: ${customerPhone} via App: ${connection.gupshupAppName}`);
 
     // Configuração base da Gupshup
-    const baseParams = {
+    const baseParams: Record<string, string> = {
       channel: 'whatsapp',
       source: connection.gupshupSourcePhone,
       destination: customerPhone,
@@ -69,7 +79,7 @@ export const processChatwootMessage = async (connection: Connection, chatwootPay
       return axios.post('https://api.gupshup.io/wa/api/v1/msg', params.toString(), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'apikey': connection.gupshupApiKey
+          'apikey': connection.gupshupApiKey!
         }
       });
     };
