@@ -3,7 +3,6 @@ version: '3.8'
 services:
   api:
     build: .
-    container_name: conector-gup-chatwoot-api
     restart: unless-stopped
     ports:
       - "${HOST_PORT:-3006}:${PORT:-3000}"
@@ -12,3 +11,10 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL:-}
       - ADMIN_API_KEY=${ADMIN_API_KEY:-}
+    networks:
+      - default
+
+networks:
+  default:
+    name: easypanel
+    external: true
