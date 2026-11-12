@@ -4,9 +4,6 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Criar pasta de dados para o SQLite e dar permissões
-RUN mkdir -p /app/data && chmod 777 /app/data
-
 COPY package*.json ./
 COPY prisma ./prisma/
 
@@ -25,6 +22,6 @@ EXPOSE 3006
 EXPOSE 80
 
 # O DATABASE_URL deve ser definido como env no Easypanel ou via Docker Compose
-# Ex: DATABASE_URL="file:/app/data/sqlite.db"
+# Ex: DATABASE_URL="postgresql://usuario:senha@host:5432/nome_do_banco?schema=public"
 
 CMD ["npm", "start"]
