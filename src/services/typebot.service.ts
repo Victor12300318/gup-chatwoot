@@ -21,26 +21,29 @@ const getTypebotHeaders = (connection: Connection) => {
 
 export const startTypebotSession = async (connection: Connection, message: string, customerPhone: string): Promise<TypebotResponse | null> => {
   try {
-    // Adicionando variáveis também na URL como Fallback de segurança
-    const url = `${connection.typebotUrl}/api/v1/typebots/${connection.typebotId}/startChat?user_phone=${customerPhone}`;
+    const prefilled: Record<string, string> = {
+      Phone: customerPhone,
+      phone: customerPhone,
+      Telefone: customerPhone,
+      telefone: customerPhone,
+      user_phone: customerPhone,
+      remote_jid: customerPhone,
+      contact_number: customerPhone,
+      customer_phone: customerPhone,
+      whatsapp: customerPhone
+    };
+
+    const queryParams = new URLSearchParams(prefilled).toString();
+    const url = `${connection.typebotUrl}/api/v1/typebots/${connection.typebotId}/startChat?${queryParams}`;
     
     const payload = {
       message: { type: 'text', text: message },
       isStreamEnabled: false,
-      // Duplicando formatos para garantir compatibilidade com diferentes versões do Typebot
-      prefilledVariables: {
-        user_phone: customerPhone,
-        remote_jid: customerPhone,
-        contact_number: customerPhone
-      },
-      variables: {
-        user_phone: customerPhone,
-        remote_jid: customerPhone,
-        contact_number: customerPhone
-      }
+      prefilledVariables: prefilled,
+      variables: prefilled
     };
 
-    console.log(`[DEBUG TYPEBOT] Enviando payload de início para ${customerPhone}`);
+    console.log(`[DEBUG TYPEBOT] Enviando payload de início para ${customerPhone} com variáveis preenchidas:`, JSON.stringify(prefilled));
 
     const response = await axios.post(url, payload, { headers: getTypebotHeaders(connection), timeout: 30000 });
     return response.data;
@@ -97,6 +100,13 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
     let sessionRecord = await prisma.typebotSession.findUnique({
       where: { phoneNumber: customerPhone }
     });
+
+    const isResetCommand = ['#reset', '#reiniciar', '/reset', 'reset'].includes(messageContent.trim().toLowerCase());
+    if (isResetCommand && sessionRecord) {
+      console.log(`[SESSÃO] Comando de reset recebido para ${customerPhone}. Limpando sessão anterior.`);
+      await prisma.typebotSession.deleteMany({ where: { phoneNumber: customerPhone } });
+      sessionRecord = null;
+    }
 
     let tbResponseData: TypebotResponse | null = null;
 
