@@ -307,23 +307,56 @@
         <h2 class="modal-title">NEW CONNECTION</h2>
         <form id="connectionForm">
           <div class="form-group">
-            <label>Gupshup Phone Number</label>
-            <input type="text" id="gupPhone" placeholder="Ex: 5511999999999" required>
+            <label style="color: var(--accent); font-weight: bold;">CONNECTION PROVIDER</label>
+            <div style="display: flex; gap: 1.5rem; margin-top: 0.5rem; background: #161616; padding: 0.75rem 1rem; border: 1px solid #222;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-main);">
+                <input type="radio" name="providerOption" value="gupshup" checked onchange="handleProviderChange()"> Gupshup
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-main);">
+                <input type="radio" name="providerOption" value="whatsapp_cloud" onchange="handleProviderChange()"> WhatsApp Cloud API (Meta)
+              </label>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Gupshup App Name</label>
-            <input type="text" id="gupApp" placeholder="Ex: MyStoreApp" required>
+
+          <div id="gupshupFields">
+            <div class="form-group">
+              <label>Gupshup Phone Number</label>
+              <input type="text" id="gupPhone" placeholder="Ex: 5511999999999">
+            </div>
+            <div class="form-group">
+              <label>Gupshup App Name</label>
+              <input type="text" id="gupApp" placeholder="Ex: MyStoreApp">
+            </div>
+            <div class="form-group">
+              <label>Gupshup API Key</label>
+              <input type="password" id="gupKey">
+            </div>
+            
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; background: rgba(217, 255, 0, 0.05); padding: 1rem; border: 1px solid var(--accent); margin-top: 1rem;">
+              <input type="checkbox" id="autoCreate" checked style="width: auto; accent-color: var(--accent);">
+              <label for="autoCreate" style="margin: 0; color: var(--accent); font-weight: bold; cursor: pointer;">AUTO-CREATE CHATWOOT INBOX</label>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Gupshup API Key</label>
-            <input type="password" id="gupKey" required>
+
+          <div id="metaFields" style="display: none;">
+            <div class="form-group">
+              <label>Meta Phone Number ID</label>
+              <input type="text" id="metaPhoneId" placeholder="Ex: 104523948529348">
+            </div>
+            <div class="form-group">
+              <label>Meta Access Token (Permanent / System User)</label>
+              <input type="password" id="metaToken" placeholder="EAAB...">
+            </div>
+            <div class="form-group">
+              <label>WhatsApp Phone Number (Opcional - Exibição)</label>
+              <input type="text" id="metaPhone" placeholder="Ex: 5511999999999">
+            </div>
+            <div style="font-size: 0.82rem; color: #888; margin-bottom: 1rem; line-height: 1.4; background: rgba(0, 210, 255, 0.05); padding: 0.75rem; border: 1px solid rgba(0, 210, 255, 0.2);">
+              ℹ️ Como o seu WhatsApp já está conectado à Meta pelo Chatwoot, informe o <b>API Inbox ID</b> abaixo para o conector receber mensagens e responder via Typebot com botões nativos.
+            </div>
           </div>
+
           <div style="height: 1px; background: #222; margin: 2rem 0;"></div>
-          
-          <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; background: rgba(217, 255, 0, 0.05); padding: 1rem; border: 1px solid var(--accent);">
-            <input type="checkbox" id="autoCreate" checked style="width: auto; accent-color: var(--accent);">
-            <label for="autoCreate" style="margin: 0; color: var(--accent); font-weight: bold; cursor: pointer;">AUTO-CREATE CHATWOOT INBOX</label>
-          </div>
 
           <div class="form-group">
             <label>Chatwoot URL</label>
@@ -417,20 +450,38 @@
 
           data.forEach(conn => {
             const baseUrl = window.location.origin;
+            const isMeta = conn.provider === 'whatsapp_cloud';
             const card = document.createElement('div');
             card.className = 'card';
+            
+            const titlePhone = isMeta 
+              ? (conn.whatsappSourcePhone ? '+' + conn.whatsappSourcePhone : 'Phone ID: ' + conn.whatsappPhoneId)
+              : '+' + (conn.gupshupSourcePhone || 'N/A');
+
             card.innerHTML = `
               <div class="card-header">
-                <div class="phone-number">+${conn.gupshupSourcePhone}</div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <div class="phone-number">${titlePhone}</div>
+                  <span style="font-size: 0.65rem; font-weight: bold; padding: 2px 6px; border-radius: 2px; text-transform: uppercase; background: ${isMeta ? '#00d2ff' : 'var(--accent)'}; color: #000;">
+                    ${isMeta ? 'META CLOUD' : 'GUPSHUP'}
+                  </span>
+                </div>
                 <div class="status-indicator">
                   <div class="status-dot"></div> LIVE
                 </div>
               </div>
               <div class="card-body">
+                ${isMeta ? `
+                <div class="info-group">
+                  <span class="info-label">Meta Phone Number ID</span>
+                  <span class="info-value">${conn.whatsappPhoneId || 'N/A'}</span>
+                </div>
+                ` : `
                 <div class="info-group">
                   <span class="info-label">Gupshup App Name</span>
-                  <span class="info-value">${conn.gupshupAppName}</span>
+                  <span class="info-value">${conn.gupshupAppName || 'N/A'}</span>
                 </div>
+                `}
                 <div class="info-group">
                   <span class="info-label">Chatwoot Destination</span>
                   <span class="info-value">Inbox #${conn.chatwootInboxId} @ Acc #${conn.chatwootAccountId}</span>
@@ -442,6 +493,7 @@
                   </span>
                 </div>
                 <div style="height: 1px; background: #222; margin: 0.5rem 0;"></div>
+                ${!isMeta ? `
                 <div class="info-group">
                   <span class="info-label">Gupshup Webhook (Callback URL)</span>
                   <span class="info-value" style="color: var(--accent); cursor: pointer;" onclick="navigator.clipboard.writeText('${baseUrl}/webhooks/gupshup')">${baseUrl}/webhooks/gupshup</span>
@@ -450,6 +502,7 @@
                   <span class="info-label">Chatwoot Webhook (Aba Webhooks)</span>
                   <span class="info-value" style="color: var(--accent); cursor: pointer;" onclick="navigator.clipboard.writeText('${baseUrl}/webhooks/chatwoot')">${baseUrl}/webhooks/chatwoot</span>
                 </div>
+                ` : ''}
                 ${conn.typebotEnabled ? `
                 <div class="info-group">
                   <span class="info-label">Chatwoot Bot Webhook (Aba Agent Bot)</span>
@@ -485,7 +538,50 @@
         }
       }
 
+      function getSelectedProvider() {
+        const checked = document.querySelector('input[name="providerOption"]:checked');
+        return checked ? checked.value : 'gupshup';
+      }
+
+      function handleProviderChange() {
+        const provider = getSelectedProvider();
+        const gupFields = document.getElementById('gupshupFields');
+        const metaFields = document.getElementById('metaFields');
+        const inboxContainer = document.getElementById('inboxIdContainer');
+        const inboxInput = document.getElementById('cwInboxId');
+
+        if (provider === 'whatsapp_cloud') {
+          gupFields.style.display = 'none';
+          metaFields.style.display = 'block';
+
+          // Para WhatsApp Cloud, o Inbox já existe no Chatwoot
+          inboxContainer.style.display = 'block';
+          inboxInput.setAttribute('required', 'true');
+
+          document.getElementById('metaPhoneId').setAttribute('required', 'true');
+          document.getElementById('metaToken').setAttribute('required', 'true');
+
+          document.getElementById('gupPhone').removeAttribute('required');
+          document.getElementById('gupApp').removeAttribute('required');
+          document.getElementById('gupKey').removeAttribute('required');
+        } else {
+          gupFields.style.display = 'block';
+          metaFields.style.display = 'none';
+
+          document.getElementById('gupPhone').setAttribute('required', 'true');
+          document.getElementById('gupApp').setAttribute('required', 'true');
+          document.getElementById('gupKey').setAttribute('required', 'true');
+
+          document.getElementById('metaPhoneId').removeAttribute('required');
+          document.getElementById('metaToken').removeAttribute('required');
+
+          // Segue a regra do autoCreate
+          document.getElementById('autoCreate').dispatchEvent(new Event('change'));
+        }
+      }
+
       document.getElementById('autoCreate').addEventListener('change', function(e) {
+        if (getSelectedProvider() === 'whatsapp_cloud') return;
         const inboxContainer = document.getElementById('inboxIdContainer');
         const inboxInput = document.getElementById('cwInboxId');
         if (e.target.checked) {
@@ -513,31 +609,42 @@
       });
 
       // Trigger initial state
-      document.getElementById('autoCreate').dispatchEvent(new Event('change'));
+      handleProviderChange();
       document.getElementById('tbEnabled').dispatchEvent(new Event('change'));
 
       document.getElementById('connectionForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        const provider = getSelectedProvider();
         const autoCreate = document.getElementById('autoCreate').checked;
         const tbEnabled = document.getElementById('tbEnabled').checked;
         
         const payload = {
-          gupshupSourcePhone: document.getElementById('gupPhone').value.replace(/\D/g, ''),
-          gupshupAppName: document.getElementById('gupApp').value,
-          gupshupApiKey: document.getElementById('gupKey').value,
+          provider,
           chatwootUrl: document.getElementById('cwUrl').value,
           chatwootAccountId: document.getElementById('cwAccId').value,
           chatwootAccessToken: document.getElementById('cwToken').value,
-          autoCreateInbox: autoCreate,
           typebotEnabled: tbEnabled,
-          typebotUrl: document.getElementById('tbUrl').value,
-          typebotId: document.getElementById('tbId').value,
-          typebotToken: document.getElementById('tbToken').value
+          typebotUrl: document.getElementById('tbUrl').value || null,
+          typebotId: document.getElementById('tbId').value || null,
+          typebotToken: document.getElementById('tbToken').value || null
         };
 
-        if (!autoCreate) {
+        if (provider === 'whatsapp_cloud') {
+          payload.whatsappPhoneId = document.getElementById('metaPhoneId').value;
+          payload.whatsappToken = document.getElementById('metaToken').value;
+          payload.whatsappSourcePhone = document.getElementById('metaPhone').value.replace(/\D/g, '') || null;
           payload.chatwootInboxId = document.getElementById('cwInboxId').value;
+          payload.autoCreateInbox = false;
+        } else {
+          payload.gupshupSourcePhone = document.getElementById('gupPhone').value.replace(/\D/g, '');
+          payload.gupshupAppName = document.getElementById('gupApp').value;
+          payload.gupshupApiKey = document.getElementById('gupKey').value;
+          payload.autoCreateInbox = autoCreate;
+
+          if (!autoCreate) {
+            payload.chatwootInboxId = document.getElementById('cwInboxId').value;
+          }
         }
 
         const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -568,7 +675,7 @@
             closeModal();
             fetchConnections();
             e.target.reset();
-            document.getElementById('autoCreate').dispatchEvent(new Event('change'));
+            handleProviderChange();
             document.getElementById('tbEnabled').dispatchEvent(new Event('change'));
           } else {
             const errData = await res.json();
@@ -587,7 +694,9 @@
       function openModal() {
         editingConnectionId = null;
         document.getElementById('connectionForm').reset();
-        document.getElementById('autoCreate').dispatchEvent(new Event('change'));
+        const gupRadio = document.querySelector('input[name="providerOption"][value="gupshup"]');
+        if (gupRadio) gupRadio.checked = true;
+        handleProviderChange();
         document.getElementById('tbEnabled').dispatchEvent(new Event('change'));
         document.querySelector('.modal-title').innerText = 'NEW CONNECTION';
         document.getElementById('addModal').classList.add('active');
@@ -601,17 +710,30 @@
         editingConnectionId = conn.id;
         document.querySelector('.modal-title').innerText = 'EDIT CONNECTION';
         
-        document.getElementById('gupPhone').value = conn.gupshupSourcePhone;
-        document.getElementById('gupApp').value = conn.gupshupAppName;
-        document.getElementById('gupKey').value = conn.gupshupApiKey;
+        const prov = conn.provider || 'gupshup';
+        const radio = document.querySelector(`input[name="providerOption"][value="${prov}"]`);
+        if (radio) radio.checked = true;
+        handleProviderChange();
+
+        if (prov === 'whatsapp_cloud') {
+          document.getElementById('metaPhoneId').value = conn.whatsappPhoneId || '';
+          document.getElementById('metaToken').value = conn.whatsappToken || '';
+          document.getElementById('metaPhone').value = conn.whatsappSourcePhone || '';
+        } else {
+          document.getElementById('gupPhone').value = conn.gupshupSourcePhone || '';
+          document.getElementById('gupApp').value = conn.gupshupAppName || '';
+          document.getElementById('gupKey').value = conn.gupshupApiKey || '';
+        }
         
-        document.getElementById('cwUrl').value = conn.chatwootUrl;
-        document.getElementById('cwAccId').value = conn.chatwootAccountId;
-        document.getElementById('cwInboxId').value = conn.chatwootInboxId;
-        document.getElementById('cwToken').value = conn.chatwootAccessToken;
+        document.getElementById('cwUrl').value = conn.chatwootUrl || '';
+        document.getElementById('cwAccId').value = conn.chatwootAccountId || '';
+        document.getElementById('cwInboxId').value = conn.chatwootInboxId || '';
+        document.getElementById('cwToken').value = conn.chatwootAccessToken || '';
         
         document.getElementById('autoCreate').checked = false;
-        document.getElementById('autoCreate').dispatchEvent(new Event('change'));
+        if (prov === 'gupshup') {
+          document.getElementById('autoCreate').dispatchEvent(new Event('change'));
+        }
 
         document.getElementById('tbEnabled').checked = !!conn.typebotEnabled;
         document.getElementById('tbUrl').value = conn.typebotUrl || '';
