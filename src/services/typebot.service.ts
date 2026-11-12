@@ -2,6 +2,7 @@ import axios from 'axios';
 import { Connection } from '@prisma/client';
 import { prisma } from '../prisma';
 import { sendGupshupMessage } from './gupshup.service';
+import { sendWhatsAppCloudMessage } from './whatsapp-cloud.service';
 import { createPrivateNote } from './chatwoot.service';
 
 export interface TypebotResponse {
@@ -162,14 +163,26 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
 
     // Enviar mensagens acumuladas
     for (const m of messagesQueue) {
-      if (m.type === 'text') {
-        await sendGupshupMessage(connection, customerPhone, { type: 'text', text: m.content });
-        await createPrivateNote(connection, conversationId, m.content);
+      if (connection.provider === 'whatsapp_cloud') {
+        if (m.type === 'text') {
+          await sendWhatsAppCloudMessage(connection, customerPhone, { type: 'text', text: m.content });
+          await createPrivateNote(connection, conversationId, m.content);
+        } else {
+          let mediaType = m.type;
+          if (m.type === 'file') mediaType = 'document';
+          await sendWhatsAppCloudMessage(connection, customerPhone, { type: mediaType, url: m.content });
+          await createPrivateNote(connection, conversationId, `[Mídia enviada pelo Bot: ${m.content}]`);
+        }
       } else {
-        let gupType = m.type;
-        if (m.type === 'file') gupType = 'document';
-        await sendGupshupMessage(connection, customerPhone, { type: gupType, url: m.content });
-        await createPrivateNote(connection, conversationId, `[Mídia enviada pelo Bot: ${m.content}]`);
+        if (m.type === 'text') {
+          await sendGupshupMessage(connection, customerPhone, { type: 'text', text: m.content });
+          await createPrivateNote(connection, conversationId, m.content);
+        } else {
+          let gupType = m.type;
+          if (m.type === 'file') gupType = 'document';
+          await sendGupshupMessage(connection, customerPhone, { type: gupType, url: m.content });
+          await createPrivateNote(connection, conversationId, `[Mídia enviada pelo Bot: ${m.content}]`);
+        }
       }
     }
 
@@ -187,59 +200,90 @@ export const runTypebotFlow = async (connection: Connection, conversationId: num
         const anyItemTooLongForButtons = items.some((i: any) => (i.content || '').length > 20);
         const forceList = qtdItems > 3 || anyItemTooLongForButtons;
 
-        if (!forceList) {
-          // CASO 1: Botões (Quick Reply) - Máximo 3 opções e texto curto (<20)
-          const options = items.map((item: any) => {
-            const label = (item.content || '').substring(0, 20);
-            return { type: 'text', title: label, postbackText: item.content }; // postbackText sempre completo
-          });
-
-          interactivePayload = {
-            type: 'quick_reply',
-            content: { type: 'text', text: inputBodyText },
-            options: options
-          };
-          noteContent = `[Botões]: ${options.map((o: any) => o.title).join(', ')}`;
+        if (connection.provider === 'whatsapp_cloud') {
+          if (!forceList) {
+            // CASO 1: Botões (Quick Reply)
+            const options = items.map((item: any) => ({
+              title: (item.content || '').substring(0, 20),
+              postbackText: item.content
+            }));
+            await sendWhatsAppCloudMessage(connection, customerPhone, {
+              type: 'quick_reply',
+              content: { text: inputBodyText },
+              options
+            });
+            await createPrivateNote(connection, conversationId, `[Botões]: ${options.map((o: any) => o.title).join(', ')}`);
+          } else {
+            // CASO 2: Lista
+            const rows = items.slice(0, 10).map((item: any, index: number) => ({
+              title: (item.content || '').substring(0, 24),
+              description: (item.content || '').length > 24 ? (item.content || '').substring(0, 72) : undefined,
+              postbackText: item.content
+            }));
+            await sendWhatsAppCloudMessage(connection, customerPhone, {
+              type: 'list',
+              title: 'Menu',
+              body: inputBodyText,
+              buttonText: 'Ver Opções',
+              sectionTitle: 'Escolha',
+              items: rows
+            });
+            await createPrivateNote(connection, conversationId, `[Lista]: ${rows.map((r: any) => r.title).join(', ')}`);
+          }
         } else {
-          // CASO 2: Lista (List Message) - De 1 a 10 opções
-          const options = items.slice(0, 10).map((item: any, index: number) => {
-            const fullText = item.content || '';
-            const prefix = `${index + 1}. `;
-            const maxTitleLength = 24;
-            
-            let displayTitle = fullText;
-            const needsTruncate = fullText.length > maxTitleLength;
+          // Provedor Gupshup
+          if (!forceList) {
+            // CASO 1: Botões (Quick Reply) - Máximo 3 opções e texto curto (<20)
+            const options = items.map((item: any) => {
+              const label = (item.content || '').substring(0, 20);
+              return { type: 'text', title: label, postbackText: item.content };
+            });
 
-            if (needsTruncate) {
-              // Deixa espaço para o prefixo (ex: "1. ") e para as reticências "..."
-              // 24 - (comprimento do prefixo) - 3 das reticências
-              const availableSpace = maxTitleLength - prefix.length - 3;
-              displayTitle = `${prefix}${fullText.substring(0, availableSpace)}...`;
-            }
-            
-            return {
-              title: displayTitle,
-              description: fullText.length > 24 ? fullText.substring(0, 72) : undefined,
-              postbackText: fullText // O Typebot receberá o texto ORIGINAL e COMPLETO
-            };
-          });
-
-          interactivePayload = {
-            type: 'list',
-            title: 'Menu'.substring(0, 24),
-            body: inputBodyText.substring(0, 1024),
-            msgid: `list_${Date.now()}`,
-            globalButtons: [{ type: 'text', title: 'Ver Opções'.substring(0, 20) }],
-            items: [{
-              title: 'Escolha'.substring(0, 24),
+            interactivePayload = {
+              type: 'quick_reply',
+              content: { type: 'text', text: inputBodyText },
               options: options
-            }]
-          };
-          noteContent = `[Lista]: ${options.map((r: any) => r.title).join(', ')}`;
-        }
+            };
+            noteContent = `[Botões]: ${options.map((o: any) => o.title).join(', ')}`;
+          } else {
+            // CASO 2: Lista (List Message) - De 1 a 10 opções
+            const options = items.slice(0, 10).map((item: any, index: number) => {
+              const fullText = item.content || '';
+              const prefix = `${index + 1}. `;
+              const maxTitleLength = 24;
+              
+              let displayTitle = fullText;
+              const needsTruncate = fullText.length > maxTitleLength;
 
-        await sendGupshupMessage(connection, customerPhone, interactivePayload);
-        await createPrivateNote(connection, conversationId, noteContent);
+              if (needsTruncate) {
+                const availableSpace = maxTitleLength - prefix.length - 3;
+                displayTitle = `${prefix}${fullText.substring(0, availableSpace)}...`;
+              }
+              
+              return {
+                title: displayTitle,
+                description: fullText.length > 24 ? fullText.substring(0, 72) : undefined,
+                postbackText: fullText
+              };
+            });
+
+            interactivePayload = {
+              type: 'list',
+              title: 'Menu'.substring(0, 24),
+              body: inputBodyText.substring(0, 1024),
+              msgid: `list_${Date.now()}`,
+              globalButtons: [{ type: 'text', title: 'Ver Opções'.substring(0, 20) }],
+              items: [{
+                title: 'Escolha'.substring(0, 24),
+                options: options
+              }]
+            };
+            noteContent = `[Lista]: ${options.map((r: any) => r.title).join(', ')}`;
+          }
+
+          await sendGupshupMessage(connection, customerPhone, interactivePayload);
+          await createPrivateNote(connection, conversationId, noteContent);
+        }
       }
     }
   } catch (error) {
