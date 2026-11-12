@@ -6,10 +6,12 @@ services:
     container_name: conector-gup-chatwoot-api
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${HOST_PORT:-3006}:${PORT:-3000}"
     environment:
-      - PORT=3000
-      - DATABASE_URL=file:/app/data/sqlite.db
+      - PORT=${PORT:-3000}
+      - DATABASE_URL=${DATABASE_URL:-file:/app/data/sqlite.db}
+      - REDIS_URL=${REDIS_URL:-}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-}
     volumes:
       - sqlite_data:/app/data
 
