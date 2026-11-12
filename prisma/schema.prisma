@@ -10,16 +10,26 @@ datasource db {
 
 model Connection {
   id                  String   @id @default(uuid())
-  gupshupSourcePhone  String   @unique
-  gupshupAppName      String
-  gupshupApiKey       String
+  provider            String   @default("gupshup") // "gupshup" | "whatsapp_cloud"
+
+  // Gupshup
+  gupshupSourcePhone  String?
+  gupshupAppName      String?
+  gupshupApiKey       String?
   
+  // WhatsApp Cloud API (Meta)
+  whatsappPhoneId     String?
+  whatsappToken       String?
+  whatsappSourcePhone String?
+
+  // Chatwoot
   chatwootUrl         String
   chatwootAccountId   Int
   chatwootInboxId     Int
   chatwootAccessToken String
   chatwootHmacToken   String?
 
+  // Typebot
   typebotEnabled      Boolean  @default(false)
   typebotUrl          String?
   typebotId           String?
